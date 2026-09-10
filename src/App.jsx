@@ -1099,13 +1099,14 @@ function joinRouteStopTimeWindow(date, timeRange) {
   return [date, timeRange].filter((value) => String(value || "").trim()).join(" · ");
 }
 
-function toDateInputValue(value = "") {
+function toEnglishDateInputValue(value = "") {
   const match = String(value).trim().match(/^(\d{4})[/-](\d{2})[/-](\d{2})$/);
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+  return match ? `${match[2]}/${match[3]}/${match[1]}` : String(value);
 }
 
-function fromDateInputValue(value = "") {
-  return String(value).replace(/-/g, "/");
+function fromEnglishDateInputValue(value = "") {
+  const match = String(value).trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? `${match[3]}/${match[1]}/${match[2]}` : String(value);
 }
 
 function toTimeInputValue(value = "", inheritedMeridiem = "") {
@@ -1194,12 +1195,13 @@ function FieldRecord({ field, value, onChange, editing, issueState, showReviewIs
           <FieldLabel>{field.label}</FieldLabel>
           <div className="time-window-control-fields">
             <TextInput
-              type="date"
-              inputProps={{ "aria-label": "Date" }}
-              value={toDateInputValue(splitRouteStopTimeWindow(value).date)}
+              type="text"
+              placeholder="MM/DD/YYYY"
+              inputProps={{ "aria-label": "Date", inputMode: "numeric", maxLength: 10, pattern: "(0[1-9]|1[0-2])/(0[1-9]|[12]\\d|3[01])/\\d{4}", autoComplete: "off" }}
+              value={toEnglishDateInputValue(splitRouteStopTimeWindow(value).date)}
               onChange={(event) => {
                 const timeWindow = splitRouteStopTimeWindow(value);
-                onChange(joinRouteStopTimeWindow(fromDateInputValue(event.target.value), timeWindow.timeRange));
+                onChange(joinRouteStopTimeWindow(fromEnglishDateInputValue(event.target.value), timeWindow.timeRange));
               }}
             />
             <TimeRangeInput
