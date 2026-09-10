@@ -41,7 +41,7 @@ try {
   await page.getByRole('heading', { name: '2026 Retail West LTL', exact: true }).waitFor()
   await page.getByText('Customer pricing contract').waitFor()
   await page.getByRole('heading', { name: 'Contract overview' }).waitFor()
-  assert.equal(await page.locator('.rate-matrix-table [role="row"]').count(), 4)
+  assert.equal(await page.locator('.rate-matrix-table [role="row"]').count(), 3)
   assert.equal(await page.locator('.surcharge-rule-table [role="row"]').count(), 3)
   await page.getByRole('button', { name: 'Add rule' }).click()
   await page.getByRole('combobox', { name: 'Additional rule 3 type' }).click()

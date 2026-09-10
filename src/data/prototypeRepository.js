@@ -94,7 +94,6 @@ const ruleTemplateCatalog = [
   { templateKey: "flat_rate", label: "Flat rate", description: "One fixed amount when conditions match.", rateLabel: "Fixed amount", defaultUnit: "flat" },
   { templateKey: "per_unit", label: "Per unit", description: "Quantity multiplied by a configured unit amount.", rateLabel: "Unit rate", defaultUnit: "per unit" },
   { templateKey: "tiered_rate", label: "Tiered rate", description: "Select a price from weight, volume or quantity tiers.", rateLabel: "Tier rate", defaultUnit: "tier" },
-  { templateKey: "zone_tier_matrix", label: "Zone × tier matrix", description: "Match origin and destination zones, then select a tier.", rateLabel: "Matrix rate", defaultUnit: "matrix" },
   { templateKey: "percentage_surcharge", label: "Percentage surcharge", description: "Apply a percentage to eligible charge lines.", rateLabel: "Percentage rate", defaultUnit: "percent" },
   { templateKey: "threshold_time", label: "Threshold + time", description: "Start charging after a free threshold, then price each time block.", rateLabel: "Block rate", defaultUnit: "per 30 min" },
 ];
@@ -131,7 +130,7 @@ const vendorCostResults = {
   "TRK-DEMO-001": {
     calculationStatus: "estimated",
     chargeLines: [
-      { code: "BASE_LTL", description: "Carrier linehaul", source: "Zone × tier matrix", templateKey: "zone_tier_matrix", amount: 420 },
+      { code: "BASE_LTL", description: "Carrier linehaul", source: "Tiered rate", templateKey: "tiered_rate", amount: 420 },
       { code: "LIFTGATE", description: "Liftgate reimbursement", source: "Flat rate", templateKey: "flat_rate", amount: 50 },
     ],
     initialAdjustments: [],
@@ -139,7 +138,7 @@ const vendorCostResults = {
   "TRK-DEMO-002": {
     calculationStatus: "final",
     chargeLines: [
-      { code: "BASE_LTL", description: "Carrier linehaul", source: "Zone × tier matrix", templateKey: "zone_tier_matrix", amount: 880 },
+      { code: "BASE_LTL", description: "Carrier linehaul", source: "Tiered rate", templateKey: "tiered_rate", amount: 880 },
       { code: "APPOINTMENT", description: "Appointment reimbursement", source: "Flat rate", templateKey: "flat_rate", amount: 80 },
     ],
     initialAdjustments: [],
@@ -155,7 +154,7 @@ const vendorCostResults = {
   "TRK-DEMO-004": {
     calculationStatus: "final",
     chargeLines: [
-      { code: "BASE_LTL", description: "Carrier linehaul", source: "Zone × tier matrix", templateKey: "zone_tier_matrix", amount: 610 },
+      { code: "BASE_LTL", description: "Carrier linehaul", source: "Tiered rate", templateKey: "tiered_rate", amount: 610 },
       { code: "COLD_CHAIN", description: "Refrigerated equipment", source: "Flat rate", templateKey: "flat_rate", amount: 70 },
     ],
     initialAdjustments: [],
@@ -329,8 +328,8 @@ export const prototypeRepository = {
       versionHistory: clone(quoteVersionHistory[quote.quoteId] || []),
       rateMatrix: (quote.rateMatrix || []).map((rule) => ({
         ...rule,
-        templateKey: rule.basis === "Per truck" ? "flat_rate" : "zone_tier_matrix",
-        templateLabel: rule.basis === "Per truck" ? "Flat rate" : "Zone × tier matrix",
+        templateKey: rule.basis === "Per truck" ? "flat_rate" : "tiered_rate",
+        templateLabel: rule.basis === "Per truck" ? "Flat rate" : "Tiered rate",
       })),
       surchargeRules: (quote.surchargeRules || []).map((rule) => ({
         ...rule,
@@ -362,7 +361,7 @@ export const prototypeRepository = {
           ...result.chargeLines.map((line) => ({
             ...line,
             serviceGroup: "Trucking",
-            templateKey: line.code.startsWith("BASE_") ? "zone_tier_matrix" : line.code === "COLD_CHAIN" ? "percentage_surcharge" : "flat_rate",
+            templateKey: line.code.startsWith("BASE_") ? "tiered_rate" : line.code === "COLD_CHAIN" ? "percentage_surcharge" : "flat_rate",
           })),
           ...warehouseChargeLines,
         ],

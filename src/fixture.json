@@ -438,9 +438,8 @@
         "effectiveTo": "2026-12-31",
         "shipmentIds": ["TRK-DEMO-001"],
         "rateMatrix": [
-          { "lane": "Zone A → Zone B", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 500 },
-          { "lane": "Zone A → Zone B", "tier": "2,501–5,000 lb", "basis": "Billable weight", "rate": 760 },
-          { "lane": "Zone B → Zone C", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 680 }
+          { "lane": "LTL shipments", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 500 },
+          { "lane": "LTL shipments", "tier": "2,501–5,000 lb", "basis": "Billable weight", "rate": 760 }
         ],
         "surchargeRules": [
           { "code": "LIFTGATE", "name": "Liftgate delivery", "trigger": "Per occurrence", "rate": 100, "unit": "flat" },
@@ -525,7 +524,7 @@
         "inputs": [
           { "label": "Actual weight", "value": "2,450 lb" },
           { "label": "Billable weight", "value": "2,500 lb" },
-          { "label": "Rate lane", "value": "Zone A → Zone B" }
+          { "label": "Applies when", "value": "LTL shipments" }
         ],
         "chargeLines": [
           { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–2,500 lb tier", "amount": 500 },

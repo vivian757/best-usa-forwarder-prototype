@@ -96,7 +96,7 @@ const baseCostRatePlans = prototypeRepository.getCostRatePlanOptions().map((plan
   ],
 }));
 const ruleTemplates = prototypeRepository.getRuleTemplates();
-const baseRuleTemplates = ruleTemplates.filter((template) => ["flat_rate", "tiered_rate", "zone_tier_matrix"].includes(template.templateKey));
+const baseRuleTemplates = ruleTemplates.filter((template) => ["flat_rate", "tiered_rate"].includes(template.templateKey));
 const additionalRuleTemplates = ruleTemplates.filter((template) => template.templateKey === "per_unit");
 const quotationShipmentModeOptions = [
   { value: "OCEAN", label: "Ocean" },
@@ -111,11 +111,6 @@ const carrierRuleAppliesWhenOptions = [
 ];
 const EMPTY_SOURCE_FILES = [];
 const baseRuleFieldOptions = {
-  zone_tier_matrix: {
-    appliesWhen: ["Zone A → Zone B", "Zone A → Zone C", "Zone B → Zone C"],
-    tiers: ["0–2,500 lb", "2,501–5,000 lb", "5,001–10,000 lb"],
-    bases: ["Billable weight", "Actual weight"],
-  },
   tiered_rate: {
     appliesWhen: ["LTL shipments", "FTL shipments", "Refrigerated shipments"],
     tiers: ["0–2,500 lb", "2,501–5,000 lb", "5,001–10,000 lb"],
@@ -562,7 +557,7 @@ function createPricingResultFromRatePlan(shipment, ratePlan) {
         code: `BASE_${shipment.serviceType || "FREIGHT"}`,
         description: `Base ${shipment.serviceType || "freight"} charge`,
         source: baseRule.tier || baseRule.basis || "Configured rate",
-        templateKey: baseRule.basis === "Per truck" ? "flat_rate" : "zone_tier_matrix",
+        templateKey: baseRule.basis === "Per truck" ? "flat_rate" : "tiered_rate",
         serviceGroup: "Trucking",
         amount: baseAmount,
       }] : []),
