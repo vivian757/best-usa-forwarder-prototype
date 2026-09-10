@@ -3578,6 +3578,13 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
       } : rule),
     }));
   };
+  const updateBaseRuleConfiguration = (index, value) => {
+    const [tier, basis] = value.split("::");
+    setDraft((current) => ({
+      ...current,
+      rateMatrix: current.rateMatrix.map((rule, ruleIndex) => ruleIndex === index ? { ...rule, tier, basis } : rule),
+    }));
+  };
   const addDraftRule = () => {
     const code = `CUSTOM_${Date.now()}`;
     setDraft((current) => ({
@@ -3792,24 +3799,14 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   onChange={(event) => updateRule("rateMatrix", index, "lane", event.target.value)}
                   options={(fieldOptions?.appliesWhen || []).map((option) => ({ value: option, label: option }))}
                 />
-                <div className="rate-rule-config-edit">
-                  <SelectInput
-                    value={rule.tier}
-                    disabled={!fieldOptions}
-                    placeholder={fieldOptions ? "Select tier" : "Select type first"}
-                    inputProps={{ "aria-label": `Base rule ${index + 1} tier` }}
-                    onChange={(event) => updateRule("rateMatrix", index, "tier", event.target.value)}
-                    options={(fieldOptions?.tiers || []).map((option) => ({ value: option, label: option }))}
-                  />
-                  <SelectInput
-                    value={rule.basis}
-                    disabled={!fieldOptions}
-                    placeholder={fieldOptions ? "Select basis" : "Select type first"}
-                    inputProps={{ "aria-label": `Base rule ${index + 1} basis` }}
-                    onChange={(event) => updateRule("rateMatrix", index, "basis", event.target.value)}
-                    options={(fieldOptions?.bases || []).map((option) => ({ value: option, label: option }))}
-                  />
-                </div>
+                <SelectInput
+                  value={fieldOptions ? `${rule.tier}::${rule.basis}` : ""}
+                  disabled={!fieldOptions}
+                  placeholder={fieldOptions ? "Select configuration" : "Select type first"}
+                  inputProps={{ "aria-label": `Base rule ${index + 1} configuration` }}
+                  onChange={(event) => updateBaseRuleConfiguration(index, event.target.value)}
+                  options={(fieldOptions?.tiers || []).flatMap((tier) => (fieldOptions?.bases || []).map((basis) => ({ value: `${tier}::${basis}`, label: `${tier} · ${basis}` })))}
+                />
                 <div className="rule-pricing-edit-cell">
                   <TextInput aria-label={`Base rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("rateMatrix", index, "rate", event.target.value)} />
                   <small>{rulePricingHint(rule)}</small>

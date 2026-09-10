@@ -22,13 +22,17 @@ try {
   assert.equal((await table.getByRole("row").nth(1).getByRole("cell").nth(2).innerText()).trim(), "Shipment");
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  const baseConfiguration = page.getByRole("combobox", { name: "Base rule 1 configuration", exact: true });
+  assert.equal((await baseConfiguration.innerText()).trim(), "0–2,500 lb · Billable weight", "Base configuration is presented as one customer-readable field");
+  assert.equal(await page.getByRole("combobox", { name: "Base rule 1 tier", exact: true }).count(), 0);
+  assert.equal(await page.getByRole("combobox", { name: "Base rule 1 basis", exact: true }).count(), 0);
   const group = page.locator(".quotation-rule-group").filter({ has: page.getByRole("heading", { name: "Additional Pricing", exact: true }) });
   await group.getByRole("button", { name: "Add rule", exact: true }).click();
   assert.equal((await page.getByRole("combobox", { name: "Additional rule 3 rule template", exact: true }).innerText()).trim(), "Per unit");
   assert.equal((await page.getByRole("combobox", { name: "Additional rule 3 unit", exact: true }).innerText()).trim(), "Shipment");
   await page.screenshot({ path: "/tmp/quotation-additional-pricing-unit.png", fullPage: true });
 
-  console.log(JSON.stringify({ headers: ["Fee item", "Rule template", "Unit", "Unit price"], defaultTemplate: "Per unit", defaultUnit: "Shipment" }));
+  console.log(JSON.stringify({ headers: ["Fee item", "Rule template", "Unit", "Unit price"], defaultTemplate: "Per unit", defaultUnit: "Shipment", simplifiedBaseConfiguration: true }));
 } finally {
   await browser.close();
 }

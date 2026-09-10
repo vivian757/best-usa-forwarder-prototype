@@ -2604,7 +2604,6 @@ select:focus-visible,
 .rate-rule-table.is-editing > div:not(.rate-rule-head) { align-items: start; padding-block: 12px; }
 .rate-rule-table.is-editing > div > :last-child { justify-self: stretch; }
 .rate-rule-table.is-editing .best-form-control { width: 100%; }
-.rate-rule-config-edit { display: grid; gap: 8px; }
 .rule-type-edit-cell,
 .rule-pricing-edit-cell { display: grid; gap: 5px; }
 .rule-type-edit-cell > small,
