@@ -4392,8 +4392,7 @@ function BillingTable({ rows, billingType, onOpen, onOpenShipment, onExportCsv, 
     onExpandedGroupKeysChange((current) => {
       const validKeys = new Set(groups.map((group) => group.key));
       const retained = current.filter((key) => validKeys.has(key));
-      if (retained.length || !groups.length) return retained;
-      return [groups[0].key];
+      return retained.length === current.length ? current : retained;
     });
   }, [groupSignature]);
   const toggleGroup = (key) => onExpandedGroupKeysChange((current) => current.includes(key)
