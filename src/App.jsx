@@ -429,17 +429,15 @@ function buildShipmentBolDocuments(shipment, fieldValues = {}) {
       ];
   const routeStops = Array.isArray(fieldValues.routeStops) && fieldValues.routeStops.length ? fieldValues.routeStops : defaultStops;
   const cargoLines = Array.isArray(fieldValues.cargoLines) && fieldValues.cargoLines.length ? fieldValues.cargoLines : fixture.jobDraft.cargoLines;
-  const bolStops = routeStops;
+  const bolStops = routeStops.filter((stop) => stop.activity === "Delivery");
 
   return bolStops.map((stop, index) => {
-    const assignedCargoLines = stop.activity === "Pickup"
-      ? cargoLines
-      : cargoLines.filter((line) => line.deliveryStopId === stop.stopId);
+    const assignedCargoLines = cargoLines.filter((line) => line.deliveryStopId === stop.stopId);
     return {
       ...stop,
       stopIndex: routeStops.findIndex((candidate) => candidate.stopId === stop.stopId),
       bolNumber: shipment.bolNumber ? `${shipment.bolNumber}-${String(index + 1).padStart(2, "0")}` : null,
-      cargoLines: assignedCargoLines,
+      cargoLines: assignedCargoLines.length || bolStops.length > 1 ? assignedCargoLines : cargoLines.slice(0, 1),
     };
   });
 }
@@ -2170,7 +2168,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
         </div>
       </section>
       <section className="document-group" aria-labelledby="output-documents-heading">
-        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>One BOL is prepared for each shipment stop.</p></div><span>{formatBolCount(bolDocuments.length)}</span></div>
+        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>One BOL is prepared for each consignee stop.</p></div><span>{formatBolCount(bolDocuments.length)}</span></div>
         <div className="source-document-table-scroll">
           <table className="source-document-table output-document-table">
             <colgroup><col className="output-document-column" /><col className="output-generated-at-column" /><col className="output-actions-column" /></colgroup>
@@ -2179,8 +2177,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
             </thead>
             <tbody>
               {bolDocuments.map((stop, stopIndex) => {
-                const consigneeIndex = bolDocuments.slice(0, stopIndex + 1).filter((candidate) => candidate.activity === "Delivery").length;
-                const stopLabel = stop.activity === "Pickup" ? "Pickup" : `Consignee ${consigneeIndex}`;
+                const stopLabel = `Consignee ${stopIndex + 1}`;
                 return <tr key={stop.stopId}>
                 <td>
                   {bolAvailable ? (

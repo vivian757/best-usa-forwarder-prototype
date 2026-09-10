@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 
 const url = process.argv[2] || "http://127.0.0.1:5174/";
-const pdfPath = "/tmp/TRK-DEMO-001-3-BOLs.pdf";
+const pdfPath = "/tmp/TRK-DEMO-001-2-BOLs.pdf";
 const screenshotPath = "/tmp/bol-multi-page-preview.png";
 const browser = await chromium.launch({
   headless: true,
@@ -20,8 +20,8 @@ try {
   await page.locator('.MuiDataGrid-row[data-id="TRK-DEMO-001"] [data-field="shipmentId"]').click();
   await page.getByRole("heading", { name: "TRK-DEMO-001", exact: true }).waitFor();
   await page.getByRole("tab", { name: "Documents", exact: true }).click();
-  await page.getByText("3 BOLs", { exact: true }).waitFor();
-  assert.equal(await page.getByText("Bill of Lading · Pickup", { exact: true }).count(), 1, "Documents lists the pickup BOL");
+  await page.getByText("2 BOLs", { exact: true }).waitFor();
+  assert.equal(await page.getByText("Bill of Lading · Pickup", { exact: true }).count(), 0, "Documents excludes the shipper pickup stop");
   assert.equal(await page.getByText(/Bill of Lading · Consignee/).count(), 2, "Documents lists one BOL per consignee stop");
   console.log("Documents count passed");
 
@@ -36,28 +36,25 @@ try {
   assert.equal(automaticDownloadCount, 0, "Header Export BOL opens preview without downloading");
   const previewPageIndicator = previewDialog.locator(".bol-preview-page-indicator");
   await previewPageIndicator.waitFor();
-  assert.equal(await previewPageIndicator.innerText(), "1 / 3", "Preview count includes pickup and consignee stops");
-  await previewDialog.getByRole("button", { name: "Export 3 BOLs", exact: true }).waitFor();
-  await previewDialog.getByText(/Page 1 of 3/, { exact: false }).waitFor();
+  assert.equal(await previewPageIndicator.innerText(), "1 / 2", "Preview count matches consignee stops only");
+  await previewDialog.getByRole("button", { name: "Export 2 BOLs", exact: true }).waitFor();
+  await previewDialog.getByText(/Page 1 of 2/, { exact: false }).waitFor();
   await previewDialog.getByRole("button", { name: "Next BOL", exact: true }).click();
-  assert.equal(await previewPageIndicator.innerText(), "2 / 3", "Preview can navigate to the first consignee BOL");
-  await previewDialog.getByText(/Page 2 of 3/, { exact: false }).waitFor();
-  await previewDialog.getByRole("button", { name: "Next BOL", exact: true }).click();
-  assert.equal(await previewPageIndicator.innerText(), "3 / 3", "Preview can navigate to the second consignee BOL");
-  await previewDialog.getByText(/Page 3 of 3/, { exact: false }).waitFor();
+  assert.equal(await previewPageIndicator.innerText(), "2 / 2", "Preview can navigate to the second consignee BOL");
+  await previewDialog.getByText(/Page 2 of 2/, { exact: false }).waitFor();
   await previewDialog.screenshot({ path: screenshotPath });
   console.log("Multi-page preview passed");
 
   const downloadPromise = page.waitForEvent("download");
-  await previewDialog.getByRole("button", { name: "Export 3 BOLs", exact: true }).click();
+  await previewDialog.getByRole("button", { name: "Export 2 BOLs", exact: true }).click();
   const download = await downloadPromise;
   await download.saveAs(pdfPath);
   console.log("PDF downloaded");
-  assert.equal(download.suggestedFilename(), "TRK-DEMO-001-3-BOLs.pdf", "Export filename reflects the BOL count");
+  assert.equal(download.suggestedFilename(), "TRK-DEMO-001-2-BOLs.pdf", "Export filename reflects the BOL count");
   const pdfInfo = execFileSync("pdfinfo", [pdfPath], { encoding: "utf8" });
-  assert.match(pdfInfo, /^Pages:\s+3$/m, "Exported PDF contains one page per shipment stop");
+  assert.match(pdfInfo, /^Pages:\s+2$/m, "Exported PDF contains one page per consignee stop");
 
-  console.log(JSON.stringify({ documents: 3, previewPages: 3, exportedPdfPages: 3, pdfPath, screenshotPath }));
+  console.log(JSON.stringify({ documents: 2, previewPages: 2, exportedPdfPages: 2, pdfPath, screenshotPath }));
 } finally {
   await browser.close();
 }
