@@ -1,4 +1,4 @@
-import fixture from "../../../BEST_USA_Demo_Mock_Source_Set_TRK-DEMO-001.json";
+import fixture from "../fixture.json";
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
