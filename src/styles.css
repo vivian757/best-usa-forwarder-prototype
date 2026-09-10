@@ -2714,6 +2714,9 @@ select:focus-visible,
 .fee-line-unit,
 .fee-line-unit-price { font-variant-numeric: tabular-nums; }
 .fee-line-unit-price { justify-self: end; text-align: right; }
+.fee-line-unit-price.is-editing { width: 100%; display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.fee-line-unit-price.is-editing .best-form-control { min-width: 0; }
+.fee-line-unit-price.is-editing .MuiIconButton-root { flex: 0 0 auto; width: 28px; height: 28px; }
 .fee-adjustment-row { background: #fffaf3; }
 .fee-adjustment-amount { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
 .fee-adjustment-amount .best-form-control { min-width: 104px; }

@@ -811,11 +811,12 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
   const buildLedgerLines = (side, result, planId) => (result?.chargeLines || []).map((line, index) => {
     const lineKey = `${planId || "manual"}:${line.code}:${index}`;
     const override = pricingLineOverrides[side]?.[lineKey] || {};
+    if (override.deleted) return null;
     const quantity = getChargeLineQuantity(line);
     const unit = Object.prototype.hasOwnProperty.call(override, "unit") ? override.unit : getChargeLineUnit(line);
     const unitPrice = Object.prototype.hasOwnProperty.call(override, "unitPrice") ? override.unitPrice : getChargeLineUnitPrice(line);
     return { ...line, lineKey, quantity, unit, unitPrice, amount: quantity * (Number(unitPrice) || 0) };
-  });
+  }).filter(Boolean);
   const customerLines = buildLedgerLines("customer", pricingResult, ratePlan?.quoteId);
   const vendorLines = buildLedgerLines("vendor", pricingResult?.vendorCost, pricingResult?.vendorCost?.ratePlanId);
   const customerTotal = sumChargeLines({ chargeLines: customerLines }, customerAdjustments);
@@ -979,15 +980,20 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                         />
                       ) : <>{line.quantity !== 1 ? `${Number(line.quantity).toLocaleString("en-US")} × ` : ""}{line.unit}</>}
                     </span>
-                    <span className="fee-line-unit-price" role="cell">
+                    <span className={editing ? "fee-line-unit-price is-editing" : "fee-line-unit-price"} role="cell">
                       {editing ? (
-                        <TextInput
-                          aria-label={`${ledger.title} ${line.description} unit price`}
-                          type="number"
-                          inputProps={{ step: 0.01 }}
-                          value={line.unitPrice}
-                          onChange={(event) => onUpdatePricingLine?.(ledger.key, line.lineKey, { unitPrice: event.target.value })}
-                        />
+                        <>
+                          <TextInput
+                            aria-label={`${ledger.title} ${line.description} unit price`}
+                            type="number"
+                            inputProps={{ step: 0.01 }}
+                            value={line.unitPrice}
+                            onChange={(event) => onUpdatePricingLine?.(ledger.key, line.lineKey, { unitPrice: event.target.value })}
+                          />
+                          <Tooltip title="Delete fee item" placement="top">
+                            <IconButton size="small" color="error" aria-label={`Delete ${ledger.title} ${line.description}`} onClick={() => onUpdatePricingLine?.(ledger.key, line.lineKey, { deleted: true })}><Trash2 size={16} /></IconButton>
+                          </Tooltip>
+                        </>
                       ) : formatLedgerMoney(line.unitPrice)}
                     </span>
                   </div>

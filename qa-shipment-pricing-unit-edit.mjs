@@ -51,9 +51,14 @@ try {
   assert.equal(await customerUnit.inputValue(), "LOAD", "Edited unit persists after save");
   assert.equal(await customerUnitPrice.inputValue(), "1850", "Edited customer unit price persists after save");
   assert.equal(await vendorUnitPrice.inputValue(), "1750", "Edited vendor unit price persists after save");
+  await page.getByRole("button", { name: "Delete Vendor Cost High-value handling", exact: true }).click();
+  assert.equal(await page.getByText("High-value handling", { exact: true }).count(), 0, "Existing pricing lines can be deleted");
+  await page.getByRole("button", { name: "Save changes", exact: true }).click();
+  assert.equal(await page.getByText("High-value handling", { exact: true }).count(), 0, "Deleted pricing lines remain removed after save");
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.screenshot({ path: screenshotPath, fullPage: true });
 
-  console.log(JSON.stringify({ headers, editableCustomerUnitPrice: true, editableVendorUnitPrice: true, adjustmentAddDelete: true, screenshotPath }));
+  console.log(JSON.stringify({ headers, editableCustomerUnitPrice: true, editableVendorUnitPrice: true, adjustmentAddDelete: true, existingLineDelete: true, screenshotPath }));
 } finally {
   await browser.close();
 }
