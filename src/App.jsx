@@ -465,9 +465,31 @@ function formatMoneyWithCents(value, currency = "USD") {
   }).format(value);
 }
 
+function getChargeLineQuantity(line) {
+  const quantity = Number(line?.quantity);
+  return Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+}
+
+function getChargeLineUnit(line) {
+  if (line?.unit) return String(line.unit);
+  if (line?.templateKey === "per_unit") return "UNIT";
+  if (line?.code?.includes("FTL") || /truck/i.test(line?.description || "")) return "TRUCK";
+  return "SHIPMENT";
+}
+
+function getChargeLineUnitPrice(line) {
+  if (line?.unitPrice !== null && line?.unitPrice !== undefined) return Number(line.unitPrice) || 0;
+  if (line?.rate !== null && line?.rate !== undefined) return Number(line.rate) || 0;
+  return (Number(line?.amount) || 0) / getChargeLineQuantity(line);
+}
+
+function getChargeLineAmount(line) {
+  return getChargeLineQuantity(line) * getChargeLineUnitPrice(line);
+}
+
 function sumChargeLines(result, adjustments = []) {
-  return (result?.chargeLines || []).reduce((sum, line) => sum + line.amount, 0)
-    + adjustments.reduce((sum, adjustment) => sum + adjustment.amount, 0);
+  return (result?.chargeLines || []).reduce((sum, line) => sum + getChargeLineAmount(line), 0)
+    + adjustments.reduce((sum, adjustment) => sum + getChargeLineAmount(adjustment), 0);
 }
 
 function applyQuotationPlan(pricingResult, ratePlan) {
@@ -775,34 +797,47 @@ function OverviewTab({ shipment, representative, pricingResult, ratePlan, ratePl
   );
 }
 
-function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOptions = [], selectedRatePlanId, onRatePlanChange, vendorRatePlanOptions = [], selectedVendorRatePlanId, onVendorRatePlanChange, adjustments = { customer: [], vendor: [] }, onAddAdjustment, onRemoveAdjustment, onOpenRatePlan, onOpenVendorRatePlan, editing = false, actorLabel = "Demo user", showRatePlanControls = true }) {
+function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOptions = [], selectedRatePlanId, onRatePlanChange, vendorRatePlanOptions = [], selectedVendorRatePlanId, onVendorRatePlanChange, adjustments = { customer: [], vendor: [] }, pricingLineOverrides = { customer: {}, vendor: {} }, onUpdatePricingLine, onAddAdjustment, onUpdateAdjustment, onRemoveAdjustment, onOpenRatePlan, onOpenVendorRatePlan, editing = false, actorLabel = "Demo user", showRatePlanControls = true }) {
   const [adjustmentSide, setAdjustmentSide] = useState("customer");
   const [adjustmentOpen, setAdjustmentOpen] = useState(false);
-  const [adjustmentDraft, setAdjustmentDraft] = useState({ description: "", amount: "", note: "" });
+  const [adjustmentDraft, setAdjustmentDraft] = useState({ description: "", unit: "SHIPMENT", unitPrice: "", note: "" });
   const currency = pricingResult?.currency || "USD";
   const customerAdjustments = adjustments.customer || [];
   const vendorAdjustments = adjustments.vendor || [];
-  const customerTotal = sumChargeLines(pricingResult, customerAdjustments);
-  const vendorTotal = sumChargeLines(pricingResult?.vendorCost, vendorAdjustments);
   const displayedVendorRatePlanId = vendorRatePlanOptions.some((option) => option.ratePlanId === selectedVendorRatePlanId)
     ? selectedVendorRatePlanId
     : vendorRatePlanOptions[0]?.ratePlanId || "";
   const formatLedgerMoney = (value) => Number.isInteger(Number(value)) ? formatMoney(value, currency) : formatMoneyWithCents(value, currency);
-  const canSaveAdjustment = adjustmentDraft.description.trim() && Number(adjustmentDraft.amount) !== 0;
+  const buildLedgerLines = (side, result, planId) => (result?.chargeLines || []).map((line, index) => {
+    const lineKey = `${planId || "manual"}:${line.code}:${index}`;
+    const override = pricingLineOverrides[side]?.[lineKey] || {};
+    const quantity = getChargeLineQuantity(line);
+    const unit = Object.prototype.hasOwnProperty.call(override, "unit") ? override.unit : getChargeLineUnit(line);
+    const unitPrice = Object.prototype.hasOwnProperty.call(override, "unitPrice") ? override.unitPrice : getChargeLineUnitPrice(line);
+    return { ...line, lineKey, quantity, unit, unitPrice, amount: quantity * (Number(unitPrice) || 0) };
+  });
+  const customerLines = buildLedgerLines("customer", pricingResult, ratePlan?.quoteId);
+  const vendorLines = buildLedgerLines("vendor", pricingResult?.vendorCost, pricingResult?.vendorCost?.ratePlanId);
+  const customerTotal = sumChargeLines({ chargeLines: customerLines }, customerAdjustments);
+  const vendorTotal = sumChargeLines({ chargeLines: vendorLines }, vendorAdjustments);
+  const canSaveAdjustment = adjustmentDraft.description.trim() && adjustmentDraft.unit.trim() && Number(adjustmentDraft.unitPrice) !== 0;
   const openAdjustment = (side) => {
     setAdjustmentSide(side);
     setAdjustmentOpen(true);
   };
   const closeAdjustment = () => {
     setAdjustmentOpen(false);
-    setAdjustmentDraft({ description: "", amount: "", note: "" });
+    setAdjustmentDraft({ description: "", unit: "SHIPMENT", unitPrice: "", note: "" });
   };
   const saveAdjustment = () => {
     if (!canSaveAdjustment) return;
     onAddAdjustment?.(adjustmentSide, {
       adjustmentId: `ADJ-DEMO-${Date.now()}`,
       description: adjustmentDraft.description.trim(),
-      amount: Number(adjustmentDraft.amount),
+      quantity: 1,
+      unit: adjustmentDraft.unit.trim().toUpperCase(),
+      unitPrice: Number(adjustmentDraft.unitPrice),
+      amount: Number(adjustmentDraft.unitPrice),
       note: adjustmentDraft.note.trim() || "No note provided.",
       addedBy: actorLabel,
       addedAt: new Date().toISOString(),
@@ -854,8 +889,8 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
   }
 
   const ledgers = [
-    { key: "customer", title: "Customer Charge", description: "Accounts receivable and customer revenue.", result: pricingResult, plan: ratePlan, adjustments: customerAdjustments, total: customerTotal },
-    { key: "vendor", title: "Vendor Cost", description: "Accounts payable and carrier cost.", result: pricingResult.vendorCost, plan: pricingResult.vendorCost, adjustments: vendorAdjustments, total: vendorTotal },
+    { key: "customer", title: "Customer Charge", description: "Accounts receivable and customer revenue.", result: pricingResult, plan: ratePlan, lines: customerLines, adjustments: customerAdjustments, total: customerTotal },
+    { key: "vendor", title: "Vendor Cost", description: "Accounts payable and carrier cost.", result: pricingResult.vendorCost, plan: pricingResult.vendorCost, lines: vendorLines, adjustments: vendorAdjustments, total: vendorTotal },
   ];
 
   return (
@@ -925,23 +960,62 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
             </div>
 
             <div className="fee-breakdown" role="table" aria-label={`${ledger.key} fee breakdown`}>
-              <div className="fee-breakdown-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Pricing details</span><span role="columnheader">Amount</span></div>
-              {ledger.result.chargeLines.map((line) => {
+              <div className="fee-breakdown-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Pricing details</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span></div>
+              {ledger.lines.map((line) => {
                 const template = ruleTemplates.find((item) => item.templateKey === line.templateKey);
                 return (
-                  <div role="row" key={line.code}>
+                  <div className={editing ? "fee-line-row is-editing" : "fee-line-row"} role="row" key={line.lineKey}>
                     <span role="cell"><strong>{line.description}</strong></span>
                     <span role="cell"><span className="fee-rule-template">{template?.label || "Standard template"}</span><small>{formatPricingSource(line.source)}</small></span>
-                    <span role="cell">{formatLedgerMoney(line.amount)}</span>
+                    <span className="fee-line-unit" role="cell">
+                      {editing ? (
+                        <TextInput
+                          aria-label={`${ledger.title} ${line.description} unit`}
+                          value={line.unit}
+                          onChange={(event) => onUpdatePricingLine?.(ledger.key, line.lineKey, { unit: event.target.value.toUpperCase() })}
+                        />
+                      ) : <>{line.quantity !== 1 ? `${Number(line.quantity).toLocaleString("en-US")} × ` : ""}{line.unit}</>}
+                    </span>
+                    <span className="fee-line-unit-price" role="cell">
+                      {editing ? (
+                        <TextInput
+                          aria-label={`${ledger.title} ${line.description} unit price`}
+                          type="number"
+                          inputProps={{ step: 0.01 }}
+                          value={line.unitPrice}
+                          onChange={(event) => onUpdatePricingLine?.(ledger.key, line.lineKey, { unitPrice: event.target.value })}
+                        />
+                      ) : formatLedgerMoney(line.unitPrice)}
+                    </span>
                   </div>
                 );
               })}
-              {ledger.adjustments.map((adjustment) => (
+              {ledger.adjustments.map((adjustment) => {
+                const adjustmentUnit = getChargeLineUnit(adjustment);
+                const adjustmentUnitPrice = getChargeLineUnitPrice(adjustment);
+                return (
                 <div className="fee-adjustment-row" role="row" key={adjustment.adjustmentId}>
                   <span role="cell"><strong>{adjustment.description}</strong><small>Manual adjustment</small></span>
                   <span role="cell">{adjustment.note}</span>
+                  <span className="fee-line-unit" role="cell">
+                    {editing ? (
+                      <TextInput
+                        aria-label={`${adjustment.description} unit`}
+                        value={adjustmentUnit}
+                        onChange={(event) => onUpdateAdjustment?.(ledger.key, adjustment.adjustmentId, { unit: event.target.value.toUpperCase() })}
+                      />
+                    ) : adjustmentUnit}
+                  </span>
                   <span className="fee-adjustment-amount" role="cell">
-                    <span>{formatLedgerMoney(adjustment.amount)}</span>
+                    {editing ? (
+                      <TextInput
+                        aria-label={`${adjustment.description} unit price`}
+                        type="number"
+                        inputProps={{ step: 0.01 }}
+                        value={adjustmentUnitPrice}
+                        onChange={(event) => onUpdateAdjustment?.(ledger.key, adjustment.adjustmentId, { unitPrice: event.target.value, amount: Number(event.target.value) })}
+                      />
+                    ) : <span>{formatLedgerMoney(adjustmentUnitPrice)}</span>}
                     {editing ? (
                       <Tooltip title="Remove adjustment" placement="top">
                         <IconButton size="small" color="error" aria-label={`Remove ${adjustment.description}`} onClick={() => onRemoveAdjustment?.(ledger.key, adjustment.adjustmentId)}><Trash2 size={16} /></IconButton>
@@ -949,7 +1023,8 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                     ) : null}
                   </span>
                 </div>
-              ))}
+                );
+              })}
             </div>
             {editing ? (
               <div className="fee-breakdown-toolbar">
@@ -964,9 +1039,10 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
         <DialogTitle id="add-adjustment-title">Add {adjustmentSide === "customer" ? "Customer Charge" : "Vendor Cost"} Adjustment</DialogTitle>
         <DialogContent>
           <div className="adjustment-form">
-            <TextInput label="Fee item" required value={adjustmentDraft.description} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Example: Detention" />
-            <TextInput label="Amount (USD)" required type="number" value={adjustmentDraft.amount} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="0" helperText="Use a negative amount for a credit." />
-            <TextInput label="Reason and note" multiline minRows={3} value={adjustmentDraft.note} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Describe the operational exception and evidence." />
+            <TextInput aria-label="Fee item" label="Fee item" required value={adjustmentDraft.description} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Example: Detention" />
+            <TextInput aria-label="Unit" label="Unit" required value={adjustmentDraft.unit} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, unit: event.target.value.toUpperCase() }))} placeholder="Example: SHIPMENT" />
+            <TextInput aria-label={`Unit price (${currency})`} label={`Unit price (${currency})`} required type="number" inputProps={{ step: 0.01 }} value={adjustmentDraft.unitPrice} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, unitPrice: event.target.value }))} placeholder="0" helperText="Use a negative unit price for a credit." />
+            <TextInput aria-label="Reason and note" label="Reason and note" multiline minRows={3} value={adjustmentDraft.note} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Describe the operational exception and evidence." />
           </div>
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}><Button variant="outlined" color="secondary" onClick={closeAdjustment}>Cancel</Button><Button variant="contained" disabled={!canSaveAdjustment} onClick={saveAdjustment}>Add adjustment</Button></DialogActions>
@@ -2471,7 +2547,11 @@ function ShipmentPanel({
   onOpenBol,
   onExportBol,
   manualAdjustments,
+  pricingLineOverrides,
+  onUpdatePricingLine,
+  onRestorePricingLineOverrides,
   onAddAdjustment,
+  onUpdateAdjustment,
   onRemoveAdjustment,
   onRestoreAdjustments,
   initialEditing = false,
@@ -2534,6 +2614,7 @@ function ShipmentPanel({
   const [additionalSources, setAdditionalSources] = useState(() => mapExtractedSources(initialSourceFiles));
   const sourceEditBaselineRef = useRef({ additionalSources, removedSourceIds: [] });
   const adjustmentEditBaselineRef = useRef(manualAdjustments);
+  const pricingLineEditBaselineRef = useRef(pricingLineOverrides);
   const pricingRecalculationBaselineRef = useRef(false);
   useEffect(() => {
     const savedValues = initialFieldValues || {};
@@ -2550,6 +2631,7 @@ function ShipmentPanel({
     setRemovedSourceIds([]);
     sourceEditBaselineRef.current = { additionalSources: savedSources, removedSourceIds: [] };
     adjustmentEditBaselineRef.current = manualAdjustments;
+    pricingLineEditBaselineRef.current = pricingLineOverrides;
   }, [shipment.shipmentId, initialSourceFiles, initialEditing, initialDetailTab]);
   useEffect(() => {
     if (!additionalSources.some((source) => source.status === "extracting")) return undefined;
@@ -2659,6 +2741,10 @@ function ShipmentPanel({
       customer: [...(manualAdjustments.customer || [])],
       vendor: [...(manualAdjustments.vendor || [])],
     };
+    pricingLineEditBaselineRef.current = {
+      customer: { ...(pricingLineOverrides.customer || {}) },
+      vendor: { ...(pricingLineOverrides.vendor || {}) },
+    };
     rateSelectionBaselineRef.current = { customer: selectedRatePlanId, vendor: selectedVendorRatePlanId };
     pricingRecalculationBaselineRef.current = pricingNeedsRecalculation;
     setEditing(true);
@@ -2674,12 +2760,16 @@ function ShipmentPanel({
     if (JSON.stringify(manualAdjustments) !== JSON.stringify(adjustmentEditBaselineRef.current)) {
       onRestoreAdjustments?.(adjustmentEditBaselineRef.current);
     }
+    if (JSON.stringify(pricingLineOverrides) !== JSON.stringify(pricingLineEditBaselineRef.current)) {
+      onRestorePricingLineOverrides?.(pricingLineEditBaselineRef.current);
+    }
     setEditing(false);
   };
   const saveDraft = () => {
     editBaselineRef.current = { fieldValues, issueState };
     sourceEditBaselineRef.current = { additionalSources, removedSourceIds };
     adjustmentEditBaselineRef.current = manualAdjustments;
+    pricingLineEditBaselineRef.current = pricingLineOverrides;
     onSaveDraft?.(fieldValues);
     onSaveRateSelection?.({ customer: selectedRatePlanId, vendor: selectedVendorRatePlanId });
     setEditing(false);
@@ -2781,7 +2871,7 @@ function ShipmentPanel({
                   <div>Shipment details that affect pricing have changed. Recalculate to refresh Customer Charge and Vendor Cost.</div>
                 </Alert>
               ) : null}
-              <ShipmentPricingSection shipment={{ ...shipment, customer: pricingCustomer }} pricingResult={appliedPricingResult} ratePlan={relatedQuote} ratePlanOptions={ratePlanOptions} selectedRatePlanId={selectedRatePlanId} onRatePlanChange={changeCustomerRatePlan} vendorRatePlanOptions={vendorRatePlanOptions} selectedVendorRatePlanId={selectedVendorRatePlanId} onVendorRatePlanChange={changeVendorRatePlan} adjustments={manualAdjustments} onAddAdjustment={onAddAdjustment} onRemoveAdjustment={onRemoveAdjustment} onOpenRatePlan={onOpenQuote} onOpenVendorRatePlan={onOpenCarrierRate} editing={contentEditing} actorLabel="Demo user" />
+              <ShipmentPricingSection shipment={{ ...shipment, customer: pricingCustomer }} pricingResult={appliedPricingResult} ratePlan={relatedQuote} ratePlanOptions={ratePlanOptions} selectedRatePlanId={selectedRatePlanId} onRatePlanChange={changeCustomerRatePlan} vendorRatePlanOptions={vendorRatePlanOptions} selectedVendorRatePlanId={selectedVendorRatePlanId} onVendorRatePlanChange={changeVendorRatePlan} adjustments={manualAdjustments} pricingLineOverrides={pricingLineOverrides} onUpdatePricingLine={onUpdatePricingLine} onAddAdjustment={onAddAdjustment} onUpdateAdjustment={onUpdateAdjustment} onRemoveAdjustment={onRemoveAdjustment} onOpenRatePlan={onOpenQuote} onOpenVendorRatePlan={onOpenCarrierRate} editing={contentEditing} actorLabel="Demo user" />
             </section>
           ) : <>
           <section className={`single-page-section ${contentEditing ? "is-editing" : "is-viewing"}`} id="job-fields-section" aria-labelledby="job-fields-section-title">
@@ -5103,6 +5193,7 @@ function App() {
       vendor: result.vendorCost?.initialAdjustments || [],
     }]),
   ));
+  const [pricingLineOverridesByShipment, setPricingLineOverridesByShipment] = useState({});
   const [issueState, setIssueState] = useState(() => Object.fromEntries(demoIssues.map((issue) => [issue.issueId, { status: "unresolved", resolution: null }])));
 
   const unresolvedBlockingIssueCount = demoIssues.filter((issue) => issue.severity === "candidate_blocker" && issueState[issue.issueId].status === "unresolved").length;
@@ -5496,6 +5587,17 @@ function App() {
     }));
     setToast({ message: `${adjustment.description} added to the ${pricingSide} ledger.`, tone: "success" });
   };
+  const updateManualAdjustment = (shipmentId, pricingSide, adjustmentId, patch) => {
+    setManualAdjustmentsByShipment((current) => ({
+      ...current,
+      [shipmentId]: {
+        ...(current[shipmentId] || { customer: [], vendor: [] }),
+        [pricingSide]: (current[shipmentId]?.[pricingSide] || []).map((adjustment) => adjustment.adjustmentId === adjustmentId
+          ? { ...adjustment, ...patch }
+          : adjustment),
+      },
+    }));
+  };
   const removeManualAdjustment = (shipmentId, pricingSide, adjustmentId) => {
     setManualAdjustmentsByShipment((current) => ({
       ...current,
@@ -5505,6 +5607,21 @@ function App() {
       },
     }));
     setToast({ message: "Manual adjustment removed.", tone: "neutral" });
+  };
+  const updatePricingLineOverride = (shipmentId, pricingSide, lineKey, patch) => {
+    setPricingLineOverridesByShipment((current) => ({
+      ...current,
+      [shipmentId]: {
+        ...(current[shipmentId] || { customer: {}, vendor: {} }),
+        [pricingSide]: {
+          ...(current[shipmentId]?.[pricingSide] || {}),
+          [lineKey]: {
+            ...(current[shipmentId]?.[pricingSide]?.[lineKey] || {}),
+            ...patch,
+          },
+        },
+      },
+    }));
   };
   const saveQuotation = (updatedQuote, message = "Quote plan updated.", previousQuoteId = updatedQuote.quoteId) => {
     const isNew = !quotations.some((quote) => quote.quoteId === previousQuoteId);
@@ -5851,7 +5968,13 @@ function App() {
           onOpenBol={openBolPreview}
           onExportBol={exportBol}
           manualAdjustments={manualAdjustmentsByShipment[selectedShipment.shipmentId] || { customer: [], vendor: [] }}
+          pricingLineOverrides={pricingLineOverridesByShipment[selectedShipment.shipmentId] || { customer: {}, vendor: {} }}
+          onUpdatePricingLine={(pricingSide, lineKey, patch) => updatePricingLineOverride(selectedShipment.shipmentId, pricingSide, lineKey, patch)}
+          onRestorePricingLineOverrides={(overrides) => {
+            setPricingLineOverridesByShipment((current) => ({ ...current, [selectedShipment.shipmentId]: overrides }));
+          }}
           onAddAdjustment={(pricingSide, adjustment) => addManualAdjustment(selectedShipment.shipmentId, pricingSide, adjustment)}
+          onUpdateAdjustment={(pricingSide, adjustmentId, patch) => updateManualAdjustment(selectedShipment.shipmentId, pricingSide, adjustmentId, patch)}
           onRemoveAdjustment={(pricingSide, adjustmentId) => removeManualAdjustment(selectedShipment.shipmentId, pricingSide, adjustmentId)}
           onRestoreAdjustments={(adjustments) => {
             setManualAdjustmentsByShipment((current) => ({ ...current, [selectedShipment.shipmentId]: adjustments }));
