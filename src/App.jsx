@@ -3817,7 +3817,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
           <div className="quotation-rule-group">
           <div className="section-heading"><h2>Additional Pricing</h2>{editing ? <div className="section-heading-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addDraftRule}>Add rule</Button></div> : null}</div>
           <div className={`rate-rule-table surcharge-rule-table ${editing ? "is-editing" : ""}`} role="table" aria-label="Surcharge rules">
-            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Rule template</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span>{editing ? <span role="columnheader" aria-label="Actions" /> : null}</div>
+            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Rule template</span><span role="columnheader">Unit</span><span role="columnheader">Rate</span>{editing ? <span role="columnheader" aria-label="Actions" /> : null}</div>
             {displayedQuote.surchargeRules.length === 0 ? (
               <div className="rate-rule-empty" role="row">
                 <span role="cell">{editing ? "No additional pricing rules yet. Select Add rule to create one." : "No additional pricing rules available."}</span>

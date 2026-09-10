@@ -12,6 +12,7 @@ try {
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByRole("menuitem", { name: "Customer Quote", exact: true }).click();
   await page.getByRole("heading", { name: "Create Customer Quote", exact: true }).waitFor();
+  await page.getByRole("table", { name: "Surcharge rules", exact: true }).getByRole("columnheader", { name: "Rate", exact: true }).waitFor();
   await page.getByRole("button", { name: "Add rule", exact: true }).last().click();
 
   const ruleTemplate = page.getByRole("combobox", { name: "Additional rule 1 rule template", exact: true });
