@@ -2702,6 +2702,7 @@ select:focus-visible,
 
 .fee-breakdown > div { grid-template-columns: minmax(180px, 1.15fr) minmax(160px, 1fr) 120px 140px; }
 .fee-breakdown > div > :last-child { justify-self: end; text-align: right; font-variant-numeric: tabular-nums; }
+.fee-breakdown.is-editing .fee-breakdown-head > :last-child { justify-self: start; text-align: left; }
 .fee-breakdown span > strong { display: block; color: #17242e; font-size: 13px; }
 .fee-rule-template { display: block; color: #17242e; font-size: 13px; line-height: 20px; font-weight: 400; }
 .fee-breakdown span > small { display: block; color: #63717c; font-size: 11px; line-height: 16px; }

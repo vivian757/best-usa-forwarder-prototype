@@ -973,7 +973,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
               ) : null}
             </div>
 
-            <div className="fee-breakdown" role="table" aria-label={`${ledger.key} fee breakdown`}>
+            <div className={editing ? "fee-breakdown is-editing" : "fee-breakdown"} role="table" aria-label={`${ledger.key} fee breakdown`}>
               <div className="fee-breakdown-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Pricing details</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span></div>
               {ledger.lines.map((line) => {
                 const template = ruleTemplates.find((item) => item.templateKey === line.templateKey);

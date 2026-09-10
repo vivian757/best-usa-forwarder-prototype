@@ -30,6 +30,9 @@ try {
   const customerUnit = page.getByLabel("Customer Charge Base FTL charge unit", { exact: true });
   const customerUnitPrice = page.getByLabel("Customer Charge Base FTL charge unit price", { exact: true });
   const vendorUnitPrice = page.getByLabel("Vendor Cost Carrier truck rate unit price", { exact: true });
+  const unitPriceHeaderBox = await pricingTable.getByRole("columnheader", { name: "Unit price", exact: true }).boundingBox();
+  const customerUnitPriceBox = await customerUnitPrice.boundingBox();
+  assert.ok(unitPriceHeaderBox && customerUnitPriceBox && Math.abs(unitPriceHeaderBox.x - customerUnitPriceBox.x) <= 2, "Unit price header aligns with the input field");
   await customerUnit.fill("LOAD");
   await customerUnitPrice.fill("1850");
   await vendorUnitPrice.fill("1750");
