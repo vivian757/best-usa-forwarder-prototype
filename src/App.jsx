@@ -97,7 +97,7 @@ const baseCostRatePlans = prototypeRepository.getCostRatePlanOptions().map((plan
 }));
 const ruleTemplates = prototypeRepository.getRuleTemplates();
 const baseRuleTemplates = ruleTemplates.filter((template) => ["flat_rate", "tiered_rate"].includes(template.templateKey));
-const additionalRuleTemplates = ruleTemplates.filter((template) => template.templateKey === "per_unit");
+const additionalRuleTemplates = ruleTemplates.filter((template) => ["flat_rate", "per_unit", "percentage_surcharge", "threshold_time"].includes(template.templateKey));
 const quotationShipmentModeOptions = [
   { value: "OCEAN", label: "Ocean" },
   { value: "AIR", label: "Air" },
@@ -3843,8 +3843,8 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   options={["SHIPMENT", "TRUCK", "PALLET", "UNIT", "HOUR", "DAY"].map((unit) => ({ value: unit, label: formatPricingUnit(unit) }))}
                 />
                 <div className="rule-pricing-edit-cell">
-                  <TextInput aria-label={`Additional rule ${index + 1} unit price`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("surchargeRules", index, "rate", event.target.value)} />
-                  <small>{displayedQuote.currency} / {formatPricingUnit(rule.billingUnit || "SHIPMENT")}</small>
+                  <TextInput aria-label={`Additional rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("surchargeRules", index, "rate", event.target.value)} />
+                  <small>{rulePricingHint(rule)}</small>
                 </div>
                 <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete ${rule.name || `additional rule ${index + 1}`}`} onClick={() => removeDraftRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
               </div>
