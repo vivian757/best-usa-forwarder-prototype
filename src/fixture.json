@@ -1,0 +1,658 @@
+{
+  "fixtureId": "TRK-DEMO-001",
+  "fixtureVersion": "0.2",
+  "fixtureType": "synthetic_demo_data",
+  "disclaimer": "Prototype 假設資料。非真實客戶文件，不得用於評估 OCR 或 Document Extraction 準確率。",
+  "representativeCase": {
+    "status": "pending_confirmation",
+    "transportMode": "TRUCKING",
+    "serviceType": "FTL",
+    "stopPattern": "single_pickup_multi_delivery",
+    "primaryUser": "BEST USA Operations",
+    "keyInAndReviewerAreSamePerson": true
+  },
+  "sourceSet": [
+    {
+      "sourceId": "SRC-EMAIL-001",
+      "fileName": "Trucking_Request_TRK-DEMO-001.eml",
+      "documentType": "customer_email",
+      "size": 96482,
+      "version": "1",
+      "mock": true,
+      "sourceUrl": "/demo-data/TRK-DEMO-001/input/Trucking_Request_TRK-DEMO-001.eml",
+      "preview": {
+        "kind": "email",
+        "headers": [
+          ["From", "Jordan Lee <jordan.lee@example.com>"],
+          ["To", "BEST USA Operations <ops-demo@example.com>"],
+          ["Date", "Mon, 07 Sep 2026 09:12:00 -0700"],
+          ["Subject", "LTL pickup request - PO-DEMO-260914 - Sep 14"]
+        ],
+        "body": [
+          "Hi Operations,",
+          "Please arrange an LTL pickup for PO-DEMO-260914.",
+          "Pickup is on September 14 after 9:00 AM from Demo Components West LLC in Livermore. Delivery is required in Los Angeles on September 15 between 1:00 PM and 5:00 PM.",
+          "Please use liftgate service at delivery and notify Jordan Lee before arrival. The freight is stackable. We have not confirmed whether it can be turned.",
+          "Please contact us before approving any additional charge over USD 150.",
+          "The shipping request and cargo details are attached. The cargo sheet is the latest packing update.",
+          "Thank you,\nJordan Lee\nDemo Retail Distribution LLC\n+1 213-555-0168"
+        ]
+      },
+      "summary": "提出 LTL pickup request、Pickup 時間描述、收貨聯絡人、服務需求與額外費用核准指示。"
+    },
+    {
+      "sourceId": "SRC-PDF-001",
+      "fileName": "Shipping_Request_TRK-DEMO-001.pdf",
+      "documentType": "shipping_request",
+      "size": 65713,
+      "version": "1",
+      "mock": true,
+      "sourceUrl": "/demo-data/TRK-DEMO-001/input/Shipping_Request_TRK-DEMO-001.pdf",
+      "previewUrl": "/demo-data/TRK-DEMO-001/input/Shipping_Request_TRK-DEMO-001.pdf",
+      "previewKind": "pdf",
+      "summary": "提供 PO、Shipper、Consignee、Cargo、Pickup／Delivery Window 與 8 pallets。"
+    },
+    {
+      "sourceId": "SRC-XLS-001",
+      "fileName": "Cargo_Details_TRK-DEMO-001.xlsx",
+      "documentType": "cargo_details",
+      "size": 4539,
+      "version": "2",
+      "mock": true,
+      "sourceUrl": "/demo-data/TRK-DEMO-001/input/Cargo_Details_TRK-DEMO-001.xlsx",
+      "preview": {
+        "kind": "spreadsheet",
+        "sheetName": "Cargo Details",
+        "headers": ["Line ID", "H/U Type", "H/U Count", "Package Type", "Piece Count", "Commodity Description", "Total Weight (lb)", "Dimensions (in)", "Freight Class", "NMFC", "Stackable", "Turnable", "Hazmat"],
+        "rows": [["CARGO-001", "Pallet", "10", "Carton", "120", "Consumer electronic accessories", "2450", "48 x 40 x 48", "70", "", "Yes", "Not confirmed", "No"]],
+        "summary": ["Total Handling Units: 10 pallets", "Total Packages / Pieces: 120 cartons", "Shipment Total Weight: 2,450 lb", "Turnable requires Operations confirmation."]
+      },
+      "summary": "提供 Cargo 明細、120 cartons、2,450 lb 與 10 pallets；與 PDF 的 Handling Unit Count 衝突。"
+    }
+  ],
+  "jobDraft": {
+    "overview": {
+      "jobId": "TRK-DEMO-001",
+      "status": "in_review",
+      "transportMode": "TRUCKING",
+      "serviceType": "FTL",
+      "owner": "Demo Ops User",
+      "mockExtraction": true
+    },
+    "identifiers": {
+      "customerPONumber": "PO-DEMO-260914",
+      "bolNumber": null,
+      "referenceNumber": "REF-DEMO-0914"
+    },
+    "shipper": {
+      "company": "Demo Components West LLC",
+      "address": "1000 Demo Commerce Drive, Livermore, CA 94551",
+      "contact": {
+        "name": "Alex Chen",
+        "phone": "+1 925-555-0101",
+        "email": "alex.chen@example.com"
+      },
+      "timeWindow": {
+        "start": "2026-09-14T09:00:00-07:00",
+        "end": "2026-09-14T12:00:00-07:00",
+        "timeZone": "America/Los_Angeles"
+      }
+    },
+    "consignee": {
+      "company": "Demo Retail Distribution LLC",
+      "address": "2000 Sample Distribution Avenue, Los Angeles, CA 90001",
+      "contact": {
+        "name": "Jordan Lee",
+        "phone": "+1 213-555-0168",
+        "email": "jordan.lee@example.com"
+      },
+      "timeWindow": {
+        "start": "2026-09-15T13:00:00-07:00",
+        "end": "2026-09-15T17:00:00-07:00",
+        "timeZone": "America/Los_Angeles"
+      }
+    },
+    "routeStops": [
+      {
+        "stopId": "STOP-DEMO-001",
+        "activity": "Pickup",
+        "company": "BEST USA · Livermore Station",
+        "address": "1000 Demo Commerce Drive, Livermore, CA 94551",
+        "contact": "Station Operations · +1 925-555-0101",
+        "timeWindow": "2026/09/14 · 9:00 AM–12:00 PM PDT"
+      },
+      {
+        "stopId": "STOP-DEMO-002",
+        "activity": "Delivery",
+        "company": "Demo Retail Distribution LLC",
+        "address": "2000 Sample Distribution Avenue, Los Angeles, CA 90001",
+        "contact": "Jordan Lee · +1 213-555-0168",
+        "timeWindow": "2026/09/15 · 1:00–3:00 PM PDT"
+      },
+      {
+        "stopId": "STOP-DEMO-003",
+        "activity": "Delivery",
+        "company": "Demo Medical Devices Corp.",
+        "address": "4800 Harbor Commerce Way, Long Beach, CA 90810",
+        "contact": "Morgan Wu · +1 562-555-0134",
+        "timeWindow": "2026/09/15 · 3:30–5:30 PM PDT"
+      }
+    ],
+    "cargoLines": [
+      {
+        "lineId": "CARGO-001",
+        "deliveryStopId": "STOP-DEMO-002",
+        "handlingUnitType": "Pallet",
+        "handlingUnitCount": 8,
+        "packageType": "Carton",
+        "packagePieceCount": 120,
+        "commodityDescription": "Consumer electronic accessories",
+        "weight": {
+          "value": 2450,
+          "unit": "lb"
+        },
+        "dimensions": {
+          "length": 48,
+          "width": 40,
+          "height": 48,
+          "unit": "in"
+        },
+        "freightClass": "70",
+        "nmfc": null,
+        "hazmat": false,
+        "stackable": true,
+        "turnable": null
+      },
+      {
+        "lineId": "CARGO-002",
+        "deliveryStopId": "STOP-DEMO-003",
+        "handlingUnitType": "Pallet",
+        "handlingUnitCount": 4,
+        "packageType": "Carton",
+        "packagePieceCount": 48,
+        "commodityDescription": "Medical device accessories",
+        "weight": {
+          "value": 1500,
+          "unit": "lb"
+        },
+        "dimensions": {
+          "length": 48,
+          "width": 40,
+          "height": 42,
+          "unit": "in"
+        },
+        "freightClass": "85",
+        "nmfc": "184140",
+        "hazmat": false,
+        "stackable": false,
+        "turnable": false
+      }
+    ],
+    "serviceRequirements": [
+      {
+        "type": "Liftgate",
+        "appliesTo": "delivery"
+      },
+      {
+        "type": "Notify",
+        "appliesTo": "consignee"
+      }
+    ],
+    "instructions": "Carrier must obtain approval before any additional charge over USD 150.",
+    "equipmentRequirements": [],
+    "carrierAssignment": {
+      "carrier": null,
+      "quoteReference": null,
+      "proNumber": null,
+      "carrierPickupNumber": null,
+      "originTerminal": null,
+      "destinationTerminal": null
+    },
+    "commercial": {
+      "freightTerms": "Third Party",
+      "billTo": "BEST USA Logistics Demo Account"
+    },
+    "cargoTotals": {
+      "shipmentTotalWeight": {
+        "value": 3950,
+        "unit": "lb"
+      },
+      "totalHandlingUnits": 12,
+      "totalPackagesPieces": 168,
+      "linearFeet": null,
+      "density": null,
+      "cube": null
+    }
+  },
+  "reviewIssues": [
+    {
+      "issueId": "ISSUE-MISSING-001",
+      "fieldPath": "equipmentRequirements[0].type",
+      "issueType": "missing",
+      "severity": "candidate_blocker",
+      "resolutionStatus": "unresolved",
+      "sourceIds": [],
+      "originalValue": null,
+      "proposedValue": null,
+      "correctedValue": null,
+      "prototypeQuestion": "Equipment Type 是否為 LTL 案件的 Commit 必填？由誰在何時補值？"
+    },
+    {
+      "issueId": "ISSUE-LOW-001",
+      "fieldPath": "shipper.timeWindow",
+      "issueType": "low_confidence",
+      "severity": "warning",
+      "resolutionStatus": "unresolved",
+      "sourceIds": [
+        "SRC-EMAIL-001",
+        "SRC-PDF-001"
+      ],
+      "sourceLocations": [
+        "Email body: Pickup after 9 AM",
+        "PDF page 1: Pickup Window"
+      ],
+      "confidence": 0.61,
+      "originalValue": "2026-09-14 09:00–12:00 PDT",
+      "proposedValue": "2026-09-14 09:00–12:00 PDT",
+      "correctedValue": null,
+      "prototypeQuestion": "Ops 是否需要看到 Confidence 數值，還是只需要 Low Confidence 狀態與來源對照？"
+    },
+    {
+      "issueId": "ISSUE-CONFLICT-001",
+      "fieldPath": "cargoLines[0].handlingUnitCount",
+      "issueType": "conflict",
+      "severity": "candidate_blocker",
+      "resolutionStatus": "unresolved",
+      "sourceIds": [
+        "SRC-PDF-001",
+        "SRC-XLS-001"
+      ],
+      "sourceLocations": [
+        "PDF page 1: Handling Units",
+        "XLS Cargo row 3: Pallet Count"
+      ],
+      "sourceValues": [
+        {
+          "sourceId": "SRC-PDF-001",
+          "value": 8
+        },
+        {
+          "sourceId": "SRC-XLS-001",
+          "value": 10
+        }
+      ],
+      "originalValue": 8,
+      "proposedValue": 8,
+      "correctedValue": null,
+      "prototypeQuestion": "來源衝突時是否有固定優先順序，或必須由 Ops 逐次判斷？"
+    },
+    {
+      "issueId": "ISSUE-UNMAPPED-001",
+      "fieldPath": "instructions",
+      "issueType": "unmapped",
+      "severity": "warning",
+      "resolutionStatus": "unresolved",
+      "sourceIds": [
+        "SRC-EMAIL-001"
+      ],
+      "sourceLocations": [
+        "Email body: Additional charge approval"
+      ],
+      "originalValue": "Carrier must obtain approval before any additional charge over USD 150.",
+      "proposedValue": "Preserve in Instructions",
+      "correctedValue": null,
+      "prototypeQuestion": "費用核准指示保留於 Instructions 是否足夠，或需要獨立欄位與流程？"
+    }
+  ],
+  "scenarioPresets": [
+    {
+      "presetId": "combined_demo",
+      "issueIds": [
+        "ISSUE-MISSING-001",
+        "ISSUE-LOW-001",
+        "ISSUE-CONFLICT-001",
+        "ISSUE-UNMAPPED-001"
+      ]
+    },
+    {
+      "presetId": "happy_path",
+      "issueIds": []
+    },
+    {
+      "presetId": "missing_field",
+      "issueIds": [
+        "ISSUE-MISSING-001"
+      ]
+    },
+    {
+      "presetId": "low_confidence",
+      "issueIds": [
+        "ISSUE-LOW-001"
+      ]
+    },
+    {
+      "presetId": "source_conflict",
+      "issueIds": [
+        "ISSUE-CONFLICT-001"
+      ]
+    },
+    {
+      "presetId": "unmapped_information",
+      "issueIds": [
+        "ISSUE-UNMAPPED-001"
+      ]
+    },
+    {
+      "presetId": "commit_blocked",
+      "issueIds": [
+        "ISSUE-MISSING-001",
+        "ISSUE-CONFLICT-001"
+      ]
+    }
+  ],
+  "managementDemo": {
+    "disclaimer": "All collection rows are synthetic demo data. Table columns, status values, billing types and amounts remain working assumptions.",
+    "navigation": [
+      "shipments",
+      "quotations",
+      "billing",
+      "reports",
+      "partners"
+    ],
+    "shipmentViews": [
+      "all",
+      "trucking",
+      "ocean",
+      "air"
+    ],
+    "shipments": [
+      {
+        "shipmentId": "TRK-DEMO-001",
+        "customer": "Demo Retail Distribution LLC",
+        "referenceNumber": "REF-DEMO-0914",
+        "transportMode": "TRUCKING",
+        "serviceType": "FTL",
+        "route": "Livermore, CA → Los Angeles, CA → Long Beach, CA",
+        "pickupDate": "2026-09-14",
+        "status": "in_review",
+        "reviewIssueCount": 4,
+        "quotationStatus": "draft",
+        "billingStatus": "not_ready",
+        "lastUpdated": "2026-09-07T16:30:00+08:00"
+      },
+      {
+        "shipmentId": "TRK-DEMO-002",
+        "customer": "Demo Home Supply Inc.",
+        "referenceNumber": "REF-DEMO-0910",
+        "transportMode": "TRUCKING",
+        "serviceType": "LTL",
+        "route": "Oakland, CA → San Diego, CA",
+        "pickupDate": "2026-09-10",
+        "status": "confirmed",
+        "reviewIssueCount": 0,
+        "quotationStatus": "accepted",
+        "billingStatus": "draft",
+        "lastUpdated": "2026-09-06T11:20:00+08:00"
+      },
+      {
+        "shipmentId": "TRK-DEMO-003",
+        "customer": "Demo Medical Devices Corp.",
+        "referenceNumber": "REF-DEMO-0912",
+        "transportMode": "TRUCKING",
+        "serviceType": "FTL",
+        "route": "Long Beach, CA → Phoenix, AZ",
+        "pickupDate": "2026-09-12",
+        "status": "awaiting_assignment",
+        "reviewIssueCount": 1,
+        "quotationStatus": "sent",
+        "billingStatus": "not_ready",
+        "lastUpdated": "2026-09-06T09:45:00+08:00"
+      },
+      {
+        "shipmentId": "TRK-DEMO-004",
+        "customer": "Demo Foods West LLC",
+        "referenceNumber": "REF-DEMO-0903",
+        "transportMode": "TRUCKING",
+        "serviceType": "LTL",
+        "route": "Fresno, CA → Las Vegas, NV",
+        "pickupDate": "2026-09-03",
+        "status": "completed",
+        "reviewIssueCount": 0,
+        "quotationStatus": "accepted",
+        "billingStatus": "ready",
+        "lastUpdated": "2026-09-05T17:10:00+08:00"
+      }
+    ],
+    "quotations": [
+      {
+        "quoteId": "RATE-DEMO-001",
+        "customer": "Demo Retail Distribution LLC",
+        "name": "2026 Retail West LTL",
+        "version": 2,
+        "status": "accepted",
+        "currency": "USD",
+        "transportMode": "TRUCKING",
+        "serviceScope": "LTL · California",
+        "createdAt": "2025-11-15T10:00:00-08:00",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "shipmentIds": ["TRK-DEMO-001"],
+        "rateMatrix": [
+          { "lane": "Zone A → Zone B", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 500 },
+          { "lane": "Zone A → Zone B", "tier": "2,501–5,000 lb", "basis": "Billable weight", "rate": 760 },
+          { "lane": "Zone B → Zone C", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 680 }
+        ],
+        "surchargeRules": [
+          { "code": "LIFTGATE", "name": "Liftgate delivery", "trigger": "Per occurrence", "rate": 100, "unit": "flat" },
+          { "code": "DETENTION", "name": "Detention", "trigger": "After 30 free min", "rate": 200, "unit": "per 30 min" }
+        ],
+        "lastUpdated": "2026-09-07T16:30:00+08:00"
+      },
+      {
+        "quoteId": "RATE-DEMO-002",
+        "customer": "Demo Home Supply Inc.",
+        "name": "2026 Home Supply Project Rate",
+        "version": 2,
+        "status": "accepted",
+        "currency": "USD",
+        "transportMode": "TRUCKING",
+        "serviceScope": "LTL · West Coast",
+        "createdAt": "2025-12-02T14:30:00-08:00",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "shipmentIds": ["TRK-DEMO-002"],
+        "rateMatrix": [
+          { "lane": "Bay Area → San Diego", "tier": "0–3,000 lb", "basis": "Billable weight", "rate": 1050 },
+          { "lane": "Bay Area → San Diego", "tier": "3,001–6,000 lb", "basis": "Billable weight", "rate": 1440 }
+        ],
+        "surchargeRules": [
+          { "code": "RESIDENTIAL", "name": "Residential delivery", "trigger": "Per delivery", "rate": 140, "unit": "flat" },
+          { "code": "APPOINTMENT", "name": "Delivery appointment", "trigger": "Per appointment", "rate": 90, "unit": "flat" }
+        ],
+        "lastUpdated": "2026-09-06T11:20:00+08:00"
+      },
+      {
+        "quoteId": "RATE-DEMO-003",
+        "customer": "Demo Medical Devices Corp.",
+        "name": "Medical Device FTL 2026",
+        "version": 1,
+        "status": "draft",
+        "currency": "USD",
+        "transportMode": "TRUCKING",
+        "serviceScope": "FTL · Southwest",
+        "createdAt": "2026-09-01T09:15:00-07:00",
+        "effectiveFrom": "2026-10-01",
+        "effectiveTo": "2027-03-31",
+        "shipmentIds": ["TRK-DEMO-003"],
+        "rateMatrix": [
+          { "lane": "Long Beach → Phoenix", "tier": "Dry van", "basis": "Per truck", "rate": 2250 }
+        ],
+        "surchargeRules": [
+          { "code": "HIGH_VALUE", "name": "High-value handling", "trigger": "Per shipment", "rate": 200, "unit": "flat" }
+        ],
+        "lastUpdated": "2026-09-06T09:45:00+08:00"
+      },
+      {
+        "quoteId": "RATE-DEMO-004",
+        "customer": "Demo Foods West LLC",
+        "name": "Cold Chain West 2026",
+        "version": 3,
+        "status": "accepted",
+        "currency": "USD",
+        "transportMode": "TRUCKING",
+        "serviceScope": "LTL · Refrigerated",
+        "createdAt": "2026-06-12T11:20:00-07:00",
+        "effectiveFrom": "2026-07-01",
+        "effectiveTo": "2026-12-31",
+        "shipmentIds": ["TRK-DEMO-004"],
+        "rateMatrix": [
+          { "lane": "Central CA → Nevada", "tier": "0–4 pallets", "basis": "Per shipment", "rate": 700 },
+          { "lane": "Central CA → Nevada", "tier": "5–10 pallets", "basis": "Per shipment", "rate": 850 }
+        ],
+        "surchargeRules": [
+          { "code": "COLD_CHAIN", "name": "Refrigerated service", "trigger": "Per shipment", "rate": 15, "unit": "percent" },
+          { "code": "DETENTION", "name": "Detention", "trigger": "After 30 free min", "rate": 100, "unit": "per 30 min" }
+        ],
+        "lastUpdated": "2026-09-05T17:10:00+08:00"
+      }
+    ],
+    "pricingResults": {
+      "TRK-DEMO-001": {
+        "ratePlanId": "RATE-DEMO-001",
+        "calculationStatus": "estimated",
+        "ratedAt": "2026-09-07T16:30:00+08:00",
+        "currency": "USD",
+        "inputs": [
+          { "label": "Actual weight", "value": "2,450 lb" },
+          { "label": "Billable weight", "value": "2,500 lb" },
+          { "label": "Rate lane", "value": "Zone A → Zone B" }
+        ],
+        "chargeLines": [
+          { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–2,500 lb tier", "amount": 500 },
+          { "code": "LIFTGATE", "description": "Liftgate delivery", "source": "LIFTGATE rule", "amount": 100 }
+        ],
+        "initialAdjustments": []
+      },
+      "TRK-DEMO-002": {
+        "ratePlanId": "RATE-DEMO-002",
+        "calculationStatus": "final",
+        "ratedAt": "2026-09-06T11:20:00+08:00",
+        "currency": "USD",
+        "inputs": [
+          { "label": "Actual weight", "value": "2,860 lb" },
+          { "label": "Billable weight", "value": "3,000 lb" },
+          { "label": "Rate lane", "value": "Bay Area → San Diego" }
+        ],
+        "chargeLines": [
+          { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–3,000 lb tier", "amount": 1050 },
+          { "code": "RESIDENTIAL", "description": "Residential delivery", "source": "RESIDENTIAL rule", "amount": 140 },
+          { "code": "APPOINTMENT", "description": "Delivery appointment", "source": "APPOINTMENT rule", "amount": 90 }
+        ],
+        "initialAdjustments": []
+      },
+      "TRK-DEMO-003": {
+        "ratePlanId": "RATE-DEMO-003",
+        "calculationStatus": "estimated",
+        "ratedAt": "2026-09-06T09:45:00+08:00",
+        "currency": "USD",
+        "inputs": [
+          { "label": "Equipment", "value": "Dry van" },
+          { "label": "Rate basis", "value": "Per truck" },
+          { "label": "Rate lane", "value": "Long Beach → Phoenix" }
+        ],
+        "chargeLines": [
+          { "code": "BASE_FTL", "description": "Base FTL freight", "source": "Dry van rate", "amount": 2250 },
+          { "code": "HIGH_VALUE", "description": "High-value handling", "source": "HIGH_VALUE rule", "amount": 200 }
+        ],
+        "initialAdjustments": []
+      },
+      "TRK-DEMO-004": {
+        "ratePlanId": "RATE-DEMO-004",
+        "calculationStatus": "final",
+        "ratedAt": "2026-09-05T17:10:00+08:00",
+        "currency": "USD",
+        "inputs": [
+          { "label": "Handling units", "value": "4 pallets" },
+          { "label": "Temperature", "value": "Refrigerated" },
+          { "label": "Rate lane", "value": "Central CA → Nevada" }
+        ],
+        "chargeLines": [
+          { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–4 pallets tier", "amount": 700 },
+          { "code": "COLD_CHAIN", "description": "Refrigerated service", "source": "15% surcharge", "amount": 105 }
+        ],
+        "initialAdjustments": [
+          { "adjustmentId": "ADJ-DEMO-001", "description": "Detention", "amount": 175, "note": "Driver waited 45 minutes beyond free time.", "addedBy": "Demo Ops User", "addedAt": "2026-09-05T16:40:00-07:00" }
+        ]
+      }
+    },
+    "billing": [
+      {
+        "billingId": "BILL-DEMO-001",
+        "shipmentId": "TRK-DEMO-002",
+        "acceptedQuoteId": "RATE-DEMO-002",
+        "counterparty": "Demo Home Supply Inc.",
+        "billingType": "customer_ar",
+        "amount": 1280,
+        "currency": "USD",
+        "status": "draft",
+        "dueDate": null,
+        "missingData": [
+          "payment_term"
+        ]
+      },
+      {
+        "billingId": "BILL-DEMO-002",
+        "shipmentId": "TRK-DEMO-002",
+        "acceptedQuoteId": "RATE-DEMO-002",
+        "counterparty": "Demo Carrier West LLC",
+        "billingType": "vendor_ap",
+        "amount": 960,
+        "currency": "USD",
+        "status": "ready",
+        "dueDate": null,
+        "missingData": []
+      },
+      {
+        "billingId": "BILL-DEMO-003",
+        "shipmentId": "TRK-DEMO-004",
+        "acceptedQuoteId": "RATE-DEMO-004",
+        "counterparty": "Demo Foods West LLC",
+        "billingType": "customer_ar",
+        "amount": 980,
+        "currency": "USD",
+        "status": "ready",
+        "dueDate": "2026-10-05",
+        "missingData": []
+      }
+    ]
+  },
+  "downstreamPreview": {
+    "quotation": {
+      "quoteId": "Q-DEMO-001",
+      "status": "draft",
+      "sourceJobId": "TRK-DEMO-001",
+      "serviceLine": "LTL Freight",
+      "route": "Livermore, CA → Los Angeles, CA",
+      "quantity": 1,
+      "unit": "Shipment",
+      "rate": null,
+      "currency": "USD",
+      "subtotal": null,
+      "evidenceStatus": "prototype_assumption"
+    },
+    "financialHandoff": {
+      "acceptedQuoteId": null,
+      "revenue": null,
+      "vendorCost": null,
+      "arStatus": "definition_required",
+      "apStatus": "definition_required",
+      "evidenceStatus": "data_gap"
+    },
+    "managementReporting": {
+      "profit": null,
+      "margin": null,
+      "formulaStatus": "definition_required",
+      "evidenceStatus": "data_gap"
+    }
+  }
+}
