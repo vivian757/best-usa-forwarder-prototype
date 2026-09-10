@@ -3916,7 +3916,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
   );
 }
 
-function CarrierRatePlanPanel({ plan, partners, onSave, onClose, initialEditing = false, isCreating = false }) {
+function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initialEditing = false, isCreating = false }) {
   const defaultAppliesWhen = (source) => ["LTL", "FTL"].includes(source.serviceType)
     ? `${source.serviceType} shipments`
     : "All shipments";
@@ -3931,6 +3931,7 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, initialEditing 
     })),
   });
   const [editing, setEditing] = useState(Boolean(initialEditing));
+  const [carrierRateActionAnchorEl, setCarrierRateActionAnchorEl] = useState(null);
   const [draft, setDraft] = useState(() => createDraft(plan));
 
   useEffect(() => {
@@ -4053,6 +4054,40 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, initialEditing 
         <>
           <QuotationStatusSelect value={displayedPlan.status} onChange={changeStatus} ariaLabel="Carrier rate status" options={carrierRateStatusOptions} />
           <Button variant="contained" startIcon={<PenLine size={16} />} onClick={startEditing}>Edit</Button>
+          <Tooltip title="More actions" placement="bottom">
+            <IconButton
+              aria-label="More carrier rate actions"
+              aria-controls={carrierRateActionAnchorEl ? "carrier-rate-detail-actions-menu" : undefined}
+              aria-haspopup="menu"
+              aria-expanded={Boolean(carrierRateActionAnchorEl)}
+              onClick={(event) => setCarrierRateActionAnchorEl(event.currentTarget)}
+            >
+              <MoreVertical size={19} />
+            </IconButton>
+          </Tooltip>
+          <Menu
+            id="carrier-rate-detail-actions-menu"
+            anchorEl={carrierRateActionAnchorEl}
+            open={Boolean(carrierRateActionAnchorEl)}
+            onClose={() => setCarrierRateActionAnchorEl(null)}
+            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+            transformOrigin={{ vertical: "top", horizontal: "right" }}
+            slotProps={{
+              paper: { sx: { minWidth: 176, mt: .5, border: "1px solid", borderColor: "divider", borderRadius: "8px", boxShadow: "0 8px 24px rgba(16, 24, 40, .14)" } },
+              list: { "aria-label": "Carrier rate actions", dense: true },
+            }}
+          >
+            <MenuItem
+              sx={{ minHeight: 40, gap: 1, color: "error.main" }}
+              onClick={() => {
+                setCarrierRateActionAnchorEl(null);
+                onDelete?.(plan.ratePlanId);
+              }}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Delete carrier rate
+            </MenuItem>
+          </Menu>
         </>
       )}
       onClose={onClose}
@@ -6013,7 +6048,7 @@ function App() {
       ) : panel?.type === "quotation" && selectedQuote ? (
         <QuotationPanel quote={selectedQuote} onSave={saveQuotation} onClose={closeDetail} onDelete={setPendingDeleteQuotationId} initialEditing={Boolean(panel.startInEdit)} isCreating={Boolean(panel.isCreating)} />
       ) : panel?.type === "carrier-rate" && selectedCarrierRatePlan ? (
-        <CarrierRatePlanPanel plan={selectedCarrierRatePlan} partners={partners} onSave={saveCarrierRatePlan} onClose={closeDetail} initialEditing={Boolean(panel.startInEdit)} isCreating={Boolean(panel.isCreating)} />
+        <CarrierRatePlanPanel plan={selectedCarrierRatePlan} partners={partners} onSave={saveCarrierRatePlan} onClose={closeDetail} onDelete={setPendingDeleteCarrierRateId} initialEditing={Boolean(panel.startInEdit)} isCreating={Boolean(panel.isCreating)} />
       ) : (
         <>
           <PageHeader
