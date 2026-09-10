@@ -97,7 +97,7 @@ const baseCostRatePlans = prototypeRepository.getCostRatePlanOptions().map((plan
 }));
 const ruleTemplates = prototypeRepository.getRuleTemplates();
 const baseRuleTemplates = ruleTemplates.filter((template) => ["flat_rate", "tiered_rate", "zone_tier_matrix"].includes(template.templateKey));
-const additionalRuleTemplates = ruleTemplates.filter((template) => ["flat_rate", "per_unit", "percentage_surcharge", "threshold_time"].includes(template.templateKey));
+const additionalRuleTemplates = ruleTemplates.filter((template) => template.templateKey === "per_unit");
 const quotationShipmentModeOptions = [
   { value: "OCEAN", label: "Ocean" },
   { value: "AIR", label: "Air" },
@@ -498,7 +498,7 @@ function sumChargeLines(result, adjustments = []) {
 }
 
 function applyQuotationPlan(pricingResult, ratePlan) {
-  if (!pricingResult || !ratePlan || pricingResult.ratePlanId === ratePlan.quoteId) return pricingResult;
+  if (!pricingResult || !ratePlan) return pricingResult;
   const rateLane = pricingResult.inputs?.find((input) => input.label === "Rate lane")?.value;
   const billableWeightText = pricingResult.inputs?.find((input) => input.label === "Billable weight")?.value || "";
   const billableWeight = Number(billableWeightText.replace(/[^\d.]/g, ""));
@@ -519,10 +519,15 @@ function applyQuotationPlan(pricingResult, ratePlan) {
       }
       const surcharge = ratePlan.surchargeRules?.find((rule) => rule.code === line.code);
       if (!surcharge) return line;
-      const amount = surcharge.unit === "percent" && baseAmount !== undefined
-        ? Math.round(baseAmount * surcharge.rate / 100)
-        : surcharge.rate;
-      return { ...line, amount, source: surcharge.trigger || line.source };
+      return {
+        ...line,
+        quantity: 1,
+        unit: surcharge.billingUnit || "SHIPMENT",
+        unitPrice: surcharge.rate,
+        amount: surcharge.rate,
+        source: surcharge.templateLabel || "Per unit",
+        templateKey: "per_unit",
+      };
     }),
   };
 }
@@ -564,9 +569,12 @@ function createPricingResultFromRatePlan(shipment, ratePlan) {
       ...fixedSurcharges.map((rule) => ({
         code: rule.code,
         description: rule.name,
-        source: rule.trigger || "Configured rule",
-        templateKey: rule.templateKey || "flat_rate",
+        source: rule.templateLabel || "Per unit",
+        templateKey: "per_unit",
         serviceGroup: "Trucking",
+        quantity: 1,
+        unit: rule.billingUnit || "SHIPMENT",
+        unitPrice: Number(rule.rate) || 0,
         amount: Number(rule.rate) || 0,
       })),
     ],
@@ -3439,7 +3447,13 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
     transportMode: source.transportMode || "TRUCKING",
     serviceScopes: [...(source.serviceScopes || (source.serviceScope ? [source.serviceScope] : []))],
     rateMatrix: (source.rateMatrix || []).map((rule) => ({ ...rule })),
-    surchargeRules: (source.surchargeRules || []).map((rule) => ({ ...rule })),
+    surchargeRules: (source.surchargeRules || []).map((rule) => ({
+      ...rule,
+      templateKey: "per_unit",
+      templateLabel: "Per unit",
+      unit: "per unit",
+      billingUnit: rule.billingUnit || "SHIPMENT",
+    })),
     serviceItems: (source.serviceItems || []).map((item) => ({ ...item })),
   });
   const [editing, setEditing] = useState(Boolean(initialEditing));
@@ -3465,7 +3479,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
     && draft.currency
     && draft.transportMode
     && draft.rateMatrix.every((rule) => rule.templateKey && rule.lane.trim() && rule.tier.trim() && rule.basis.trim() && Number(rule.rate) > 0)
-    && draft.surchargeRules.every((rule) => rule.templateKey && rule.name.trim() && rule.trigger.trim() && Number(rule.rate) > 0)
+    && draft.surchargeRules.every((rule) => rule.templateKey && rule.name.trim() && rule.billingUnit && Number(rule.rate) > 0)
     && draft.serviceItems.every((item) => item.name.trim() && Number(item.quantity) > 0 && item.unit && Number(item.rate) > 0));
   const startEditing = () => {
     setDraft(createDraft(quote));
@@ -3568,7 +3582,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
     const code = `CUSTOM_${Date.now()}`;
     setDraft((current) => ({
       ...current,
-      surchargeRules: [...current.surchargeRules, { code, name: "", trigger: "", rate: "", unit: "", templateKey: "", templateLabel: "" }],
+      surchargeRules: [...current.surchargeRules, { code, name: "", rate: "", unit: "per unit", billingUnit: "SHIPMENT", templateKey: "per_unit", templateLabel: "Per unit" }],
     }));
     window.requestAnimationFrame(() => document.querySelector(`[data-rule-code="${code}"] [role="combobox"]`)?.focus());
   };
@@ -3602,6 +3616,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
         templateKey,
         templateLabel: template.label,
         unit: template.defaultUnit,
+        billingUnit: rule.billingUnit || "SHIPMENT",
         rate: "",
       } : rule),
     }));
@@ -3616,11 +3631,6 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
   };
   const ruleRateInputLabel = (rule) => ruleTemplates.find((candidate) => candidate.templateKey === rule.templateKey)?.rateLabel || "Rate";
   const ruleRateInputProps = (rule) => ({ min: 0, step: rule.unit === "percent" ? 0.1 : 0.01 });
-  const formatRuleRate = (rule) => {
-    if (rule.unit === "percent") return `${rule.rate}%`;
-    const suffix = rule.unit === "per 30 min" ? " / 30 min" : rule.unit === "per unit" ? " / unit" : "";
-    return `${formatMoney(rule.rate, displayedQuote.currency)}${suffix}`;
-  };
   return (
     <DetailPageFrame
       title={isCreating ? "Create Customer Quote" : quote.name}
@@ -3813,7 +3823,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
           <div className="quotation-rule-group">
           <div className="section-heading"><h2>Additional Pricing</h2>{editing ? <div className="section-heading-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addDraftRule}>Add rule</Button></div> : null}</div>
           <div className={`rate-rule-table surcharge-rule-table ${editing ? "is-editing" : ""}`} role="table" aria-label="Surcharge rules">
-            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Rule template</span><span role="columnheader">Applies when</span><span role="columnheader">Rate</span>{editing ? <span role="columnheader" aria-label="Actions" /> : null}</div>
+            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Rule template</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span>{editing ? <span role="columnheader" aria-label="Actions" /> : null}</div>
             {displayedQuote.surchargeRules.length === 0 ? (
               <div className="rate-rule-empty" role="row">
                 <span role="cell">{editing ? "No additional pricing rules yet. Select Add rule to create one." : "No additional pricing rules available."}</span>
@@ -3832,14 +3842,19 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   />
                   <small>{ruleTemplates.find((template) => template.templateKey === rule.templateKey)?.description || "Choose a standard calculation pattern."}</small>
                 </span>
-                <TextInput aria-label={`Additional rule ${index + 1} applies when`} value={rule.trigger} onChange={(event) => updateRule("surchargeRules", index, "trigger", event.target.value)} />
+                <SelectInput
+                  value={rule.billingUnit || "SHIPMENT"}
+                  inputProps={{ "aria-label": `Additional rule ${index + 1} unit` }}
+                  onChange={(event) => updateRule("surchargeRules", index, "billingUnit", event.target.value)}
+                  options={["SHIPMENT", "TRUCK", "PALLET", "UNIT", "HOUR", "DAY"].map((unit) => ({ value: unit, label: formatPricingUnit(unit) }))}
+                />
                 <div className="rule-pricing-edit-cell">
-                  <TextInput aria-label={`Additional rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("surchargeRules", index, "rate", event.target.value)} />
-                  <small>{rulePricingHint(rule)}</small>
+                  <TextInput aria-label={`Additional rule ${index + 1} unit price`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("surchargeRules", index, "rate", event.target.value)} />
+                  <small>{displayedQuote.currency} / {formatPricingUnit(rule.billingUnit || "SHIPMENT")}</small>
                 </div>
                 <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete ${rule.name || `additional rule ${index + 1}`}`} onClick={() => removeDraftRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
               </div>
-            ) : <div role="row" key={rule.code}><span role="cell"><strong>{rule.name}</strong></span><span role="cell"><strong>{rule.templateLabel}</strong></span><span role="cell">{rule.trigger}</span><strong role="cell">{formatRuleRate(rule)}</strong></div>)}
+            ) : <div role="row" key={rule.code}><span role="cell"><strong>{rule.name}</strong></span><span role="cell"><strong>Per unit</strong></span><span role="cell">{formatPricingUnit(rule.billingUnit || "SHIPMENT")}</span><strong role="cell">{formatMoney(rule.rate, displayedQuote.currency)}</strong></div>)}
           </div>
           </div>
             </>

@@ -334,8 +334,10 @@ export const prototypeRepository = {
       })),
       surchargeRules: (quote.surchargeRules || []).map((rule) => ({
         ...rule,
-        templateKey: rule.unit === "percent" ? "percentage_surcharge" : rule.unit === "per 30 min" ? "threshold_time" : "flat_rate",
-        templateLabel: rule.unit === "percent" ? "Percentage surcharge" : rule.unit === "per 30 min" ? "Threshold + time" : "Flat rate",
+        templateKey: "per_unit",
+        templateLabel: "Per unit",
+        unit: "per unit",
+        billingUnit: rule.billingUnit || "SHIPMENT",
       })),
       serviceItems: clone(quote.serviceItems || []),
     }));
