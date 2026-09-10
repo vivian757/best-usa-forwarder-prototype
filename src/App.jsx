@@ -477,6 +477,11 @@ function getChargeLineUnit(line) {
   return "SHIPMENT";
 }
 
+function formatPricingUnit(unit) {
+  const value = String(unit || "").trim();
+  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1).toLowerCase()}` : "";
+}
+
 function getChargeLineUnitPrice(line) {
   if (line?.unitPrice !== null && line?.unitPrice !== undefined) return Number(line.unitPrice) || 0;
   if (line?.rate !== null && line?.rate !== undefined) return Number(line.rate) || 0;
@@ -975,10 +980,10 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                       {editing ? (
                         <TextInput
                           aria-label={`${ledger.title} ${line.description} unit`}
-                          value={line.unit}
+                          value={formatPricingUnit(line.unit)}
                           onChange={(event) => onUpdatePricingLine?.(ledger.key, line.lineKey, { unit: event.target.value.toUpperCase() })}
                         />
-                      ) : <>{line.quantity !== 1 ? `${Number(line.quantity).toLocaleString("en-US")} × ` : ""}{line.unit}</>}
+                      ) : <>{line.quantity !== 1 ? `${Number(line.quantity).toLocaleString("en-US")} × ` : ""}{formatPricingUnit(line.unit)}</>}
                     </span>
                     <span className={editing ? "fee-line-unit-price is-editing" : "fee-line-unit-price"} role="cell">
                       {editing ? (
@@ -1010,10 +1015,10 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                     {editing ? (
                       <TextInput
                         aria-label={`${adjustment.description} unit`}
-                        value={adjustmentUnit}
+                        value={formatPricingUnit(adjustmentUnit)}
                         onChange={(event) => onUpdateAdjustment?.(ledger.key, adjustment.adjustmentId, { unit: event.target.value.toUpperCase() })}
                       />
-                    ) : adjustmentUnit}
+                    ) : formatPricingUnit(adjustmentUnit)}
                   </span>
                   <span className="fee-adjustment-amount" role="cell">
                     {editing ? (

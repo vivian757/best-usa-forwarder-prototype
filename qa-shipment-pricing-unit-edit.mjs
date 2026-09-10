@@ -20,6 +20,7 @@ try {
   const headers = await pricingTable.getByRole("columnheader").allTextContents();
   assert.deepEqual(headers, ["Fee item", "Pricing details", "Unit", "Unit price"]);
   assert.equal(headers.includes("Amount"), false, "Shipment pricing does not expose an Amount column");
+  assert.equal((await pricingTable.locator(".fee-line-unit").first().innerText()).trim(), "Truck", "Pricing units use sentence case");
   assert.equal(await pricingTable.locator(".fee-line-row small").count(), 1, "Distinct customer pricing details remain visible");
 
   const vendorLedger = page.locator(".billing-ledger-block").filter({ has: page.getByRole("heading", { name: "Vendor Cost", exact: true }) });
@@ -48,7 +49,7 @@ try {
 
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  assert.equal(await customerUnit.inputValue(), "LOAD", "Edited unit persists after save");
+  assert.equal(await customerUnit.inputValue(), "Load", "Edited unit persists after save in sentence case");
   assert.equal(await customerUnitPrice.inputValue(), "1850", "Edited customer unit price persists after save");
   assert.equal(await vendorUnitPrice.inputValue(), "1750", "Edited vendor unit price persists after save");
   await page.getByRole("button", { name: "Delete Vendor Cost High-value handling", exact: true }).click();
