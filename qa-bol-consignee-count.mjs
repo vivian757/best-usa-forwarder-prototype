@@ -20,7 +20,7 @@ try {
   await page.locator('.MuiDataGrid-row[data-id="TRK-DEMO-001"] [data-field="shipmentId"]').click();
   await page.getByRole("heading", { name: "TRK-DEMO-001", exact: true }).waitFor();
   await page.getByRole("tab", { name: "Documents", exact: true }).click();
-  await page.getByText("2 BOLs", { exact: true }).waitFor();
+  await page.getByText("2 Docs", { exact: true }).waitFor();
   assert.equal(await page.getByText("Bill of Lading · Pickup", { exact: true }).count(), 0, "Documents excludes the shipper pickup stop");
   assert.equal(await page.getByText(/Bill of Lading · Consignee/).count(), 2, "Documents lists one BOL per consignee stop");
   console.log("Documents count passed");

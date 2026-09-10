@@ -2268,7 +2268,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
         </div>
       </section>
       <section className="document-group" aria-labelledby="output-documents-heading">
-        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>One BOL is prepared for each consignee stop.</p></div><span>{formatBolCount(bolDocuments.length)}</span></div>
+        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>One BOL is prepared for each consignee stop.</p></div><span>{`${bolDocuments.length} Docs`}</span></div>
         <div className="source-document-table-scroll">
           <table className="source-document-table output-document-table">
             <colgroup><col className="output-document-column" /><col className="output-generated-at-column" /><col className="output-actions-column" /></colgroup>
