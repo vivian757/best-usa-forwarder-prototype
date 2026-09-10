@@ -963,10 +963,13 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
               <div className="fee-breakdown-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Pricing details</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span></div>
               {ledger.lines.map((line) => {
                 const template = ruleTemplates.find((item) => item.templateKey === line.templateKey);
+                const templateLabel = template?.label || "Standard template";
+                const pricingSource = (formatPricingSource(line.source) || "").trim();
+                const hasDistinctPricingSource = pricingSource.trim().toLocaleLowerCase() !== templateLabel.trim().toLocaleLowerCase();
                 return (
                   <div className={editing ? "fee-line-row is-editing" : "fee-line-row"} role="row" key={line.lineKey}>
                     <span role="cell"><strong>{line.description}</strong></span>
-                    <span role="cell"><span className="fee-rule-template">{template?.label || "Standard template"}</span><small>{formatPricingSource(line.source)}</small></span>
+                    <span role="cell"><span className="fee-rule-template">{templateLabel}</span>{hasDistinctPricingSource ? <small>{pricingSource}</small> : null}</span>
                     <span className="fee-line-unit" role="cell">
                       {editing ? (
                         <TextInput
