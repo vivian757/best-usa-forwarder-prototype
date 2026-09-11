@@ -2830,7 +2830,9 @@ select:focus-visible,
 .report-date-range-trigger .MuiButton-startIcon { color: var(--muted); }
 
 .report-date-range-popover.MuiPaper-root {
-  width: 340px;
+  width: 440px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   margin-top: 8px;
   padding: 18px;
   background: #ffffff;
