@@ -77,7 +77,7 @@ try {
   assert.equal(await commercialSection.locator(".billing-ledger-block").count(), 2, "Customer charge and vendor cost render as separate blocks");
   await commercialSection.getByRole("heading", { name: "Customer charge", exact: true }).waitFor();
   await commercialSection.getByRole("heading", { name: "Vendor cost", exact: true }).waitFor();
-  const adjustmentButtons = commercialSection.getByRole("button", { name: "Add adjustment", exact: true });
+  const adjustmentButtons = commercialSection.getByRole("button", { name: "Add item", exact: true });
   assert.equal(await adjustmentButtons.count(), 2, "Each ledger has its own adjustment action");
   await adjustmentButtons.nth(0).click();
   await page.getByRole("heading", { name: "Add customer charge adjustment", exact: true }).waitFor();

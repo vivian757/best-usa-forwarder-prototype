@@ -15,7 +15,7 @@ try {
 
   const moreButton = page.getByRole("button", { name: "More carrier rate actions", exact: true });
   await moreButton.click();
-  const deleteAction = page.getByRole("menuitem", { name: "Delete carrier rate", exact: true });
+  const deleteAction = page.getByRole("menuitem", { name: "Delete", exact: true });
   await deleteAction.waitFor();
   assert.match(await deleteAction.evaluate((element) => getComputedStyle(element).color), /rgb\(215, 71, 71\)/, "Delete carrier rate uses the error color contract");
 

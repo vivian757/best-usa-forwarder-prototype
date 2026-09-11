@@ -12,8 +12,10 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.setDefaultTimeout(10000);
   await page.goto(url, { waitUntil: "networkidle" });
-  await page.locator('.MuiDataGrid-row[data-id="TRK-DEMO-005"] [data-field="shipmentId"]').click();
-  await page.getByRole("heading", { name: "TRK-DEMO-005", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Trucking", exact: true }).click();
+  await page.getByRole("heading", { name: "Trucking", exact: true }).waitFor();
+  await page.locator('.MuiDataGrid-row[data-id="TRK-DEMO-003"]').click();
+  await page.getByRole("heading", { name: "TRK-DEMO-003", exact: true }).waitFor();
   await page.getByRole("tab", { name: "Charge & Cost", exact: true }).click();
 
   const pricingTable = page.getByRole("table", { name: "customer fee breakdown" });
@@ -27,42 +29,41 @@ try {
   assert.equal(await vendorLedger.locator(".fee-line-row small").count(), 0, "Duplicate vendor pricing details are suppressed");
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  const customerUnit = page.getByLabel("Customer Charge Base FTL charge unit", { exact: true });
-  const customerUnitPrice = page.getByLabel("Customer Charge Base FTL charge unit price", { exact: true });
+  const customerUnitPrice = page.getByLabel("Customer Charge Base FTL freight unit price", { exact: true });
   const vendorUnitPrice = page.getByLabel("Vendor Cost Carrier truck rate unit price", { exact: true });
+  assert.equal(await page.getByLabel("Customer Charge Base FTL freight unit", { exact: true }).count(), 0, "Unit remains a simple read-only value while editing");
   const unitPriceHeaderBox = await pricingTable.getByRole("columnheader", { name: "Unit price", exact: true }).boundingBox();
   const customerUnitPriceBox = await customerUnitPrice.boundingBox();
   assert.ok(unitPriceHeaderBox && customerUnitPriceBox && Math.abs(unitPriceHeaderBox.x - customerUnitPriceBox.x) <= 2, "Unit price header aligns with the input field");
-  await customerUnit.fill("LOAD");
   await customerUnitPrice.fill("1850");
   await vendorUnitPrice.fill("1750");
 
   const customerLedger = page.locator(".billing-ledger-block").filter({ has: page.getByRole("heading", { name: "Customer Charge", exact: true }) });
-  await customerLedger.getByRole("button", { name: "Add adjustment", exact: true }).click();
+  await customerLedger.getByRole("button", { name: "Add item", exact: true }).click();
   await page.getByText("Add Customer Charge Adjustment", { exact: true }).waitFor();
   const dialog = page.locator(".MuiDialog-root").filter({ hasText: "Add Customer Charge Adjustment" });
   await dialog.getByLabel("Fee item", { exact: true }).fill("Manual handling");
   await dialog.getByLabel("Unit", { exact: true }).fill("PALLET");
   await dialog.getByLabel("Unit price (USD)", { exact: true }).fill("80");
   await dialog.getByLabel("Reason and note", { exact: true }).fill("Customer-approved handling exception.");
-  await dialog.getByRole("button", { name: "Add adjustment", exact: true }).click();
+  await dialog.getByRole("button", { name: "Add item", exact: true }).click();
   await page.getByLabel("Manual handling unit price", { exact: true }).fill("75");
   await page.getByRole("button", { name: "Remove Manual handling", exact: true }).click();
   assert.equal(await page.getByText("Manual handling", { exact: true }).count(), 0, "Manual adjustments can be removed");
 
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  assert.equal(await customerUnit.inputValue(), "Load", "Edited unit persists after save in sentence case");
+  assert.equal((await pricingTable.locator(".fee-line-unit").first().innerText()).trim(), "Truck", "Read-only unit remains visible after save");
   assert.equal(await customerUnitPrice.inputValue(), "1850", "Edited customer unit price persists after save");
   assert.equal(await vendorUnitPrice.inputValue(), "1750", "Edited vendor unit price persists after save");
   await page.getByRole("button", { name: "Delete Vendor Cost High-value handling", exact: true }).click();
-  assert.equal(await page.getByText("High-value handling", { exact: true }).count(), 0, "Existing pricing lines can be deleted");
+  assert.equal(await vendorLedger.getByText("High-value handling", { exact: true }).count(), 0, "Existing vendor pricing lines can be deleted");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
-  assert.equal(await page.getByText("High-value handling", { exact: true }).count(), 0, "Deleted pricing lines remain removed after save");
+  assert.equal(await vendorLedger.getByText("High-value handling", { exact: true }).count(), 0, "Deleted vendor pricing lines remain removed after save");
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.screenshot({ path: screenshotPath, fullPage: true });
 
-  console.log(JSON.stringify({ headers, editableCustomerUnitPrice: true, editableVendorUnitPrice: true, adjustmentAddDelete: true, existingLineDelete: true, screenshotPath }));
+  console.log(JSON.stringify({ headers, readOnlyUnit: true, editableCustomerUnitPrice: true, editableVendorUnitPrice: true, adjustmentAddDelete: true, existingLineDelete: true, screenshotPath }));
 } finally {
   await browser.close();
 }

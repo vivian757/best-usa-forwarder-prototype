@@ -15,14 +15,14 @@ try {
   await page.getByRole("heading", { name: "Quotations", exact: true }).waitFor();
 
   const headers = (await page.getByRole("columnheader").allTextContents()).map((label) => label.trim()).filter(Boolean);
-  assert.deepEqual(headers.slice(0, 3), ["Quote Plan", "Quote ID", "Customer"]);
+  assert.deepEqual(headers.slice(0, 3), ["Quote Plan", "Quote No.", "Customer"]);
   assert.equal(headers.includes("Created"), true, "Created column uses the concise label");
   assert.equal(headers.includes("Created Date"), false, "Created Date label is removed");
 
   const firstRow = page.locator('.MuiDataGrid-row[data-id="RATE-DEMO-001"]');
   await firstRow.waitFor();
   assert.equal((await firstRow.locator('[data-field="name"]').textContent()).trim(), "2026 Retail West LTL", "Quote Plan contains the plan name only");
-  assert.equal((await firstRow.locator('[data-field="quoteId"]').textContent()).trim(), "RATE-DEMO-001", "Quote ID is displayed in its own column");
+  assert.equal((await firstRow.locator('[data-field="quoteId"]').textContent()).trim(), "RATE-DEMO-001", "Quote No. is displayed in its own column");
 
   console.log(JSON.stringify({ status: "passed", url, headers }, null, 2));
   await context.close();

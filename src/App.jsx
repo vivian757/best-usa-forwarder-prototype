@@ -74,6 +74,14 @@ const fixture = prototypeRepository.getFixture();
 const baseShipments = prototypeRepository.getShipments();
 const baseQuotations = prototypeRepository.getQuotations();
 const pricingResults = prototypeRepository.getPricingResults();
+const initialGeneratedOutputDocumentIds = [
+  "OCN-DEMO-001",
+  "OCN-DEMO-012",
+  "OCN-DEMO-015",
+  "AIR-DEMO-002",
+  "AIR-DEMO-013",
+  "AIR-DEMO-015",
+];
 const baseCostRatePlans = prototypeRepository.getCostRatePlanOptions().map((plan) => ({
   ...plan,
   versionHistory: [
@@ -103,6 +111,12 @@ const quotationShipmentModeOptions = [
   { value: "AIR", label: "Air" },
   { value: "TRUCKING", label: "Trucking" },
 ];
+const quotationEquipmentTypeOptions = {
+  TRUCKING: ["Van / Dry Van (V)", "Reefer (R)", "Flatbed (F)", "Straight Box Truck (SB)", "Sprinter / Cargo Van", "Container (C)", "Step Deck (SD)", "Power Only (PO)"],
+  OCEAN: ["20' General", "40' General", "40' High Cube", "20' Reefer", "40' Reefer"],
+  AIR: ["Loose cargo", "Pallet", "ULD container"],
+};
+const getQuotationEquipmentTypeOptions = (transportMode) => quotationEquipmentTypeOptions[transportMode] || quotationEquipmentTypeOptions.TRUCKING;
 const carrierRuleAppliesWhenOptions = [
   { value: "All shipments", label: "All shipments" },
   { value: "LTL shipments", label: "LTL shipments" },
@@ -112,12 +126,10 @@ const carrierRuleAppliesWhenOptions = [
 const EMPTY_SOURCE_FILES = [];
 const baseRuleFieldOptions = {
   tiered_rate: {
-    appliesWhen: ["LTL shipments", "FTL shipments", "Refrigerated shipments"],
     tiers: ["0–2,500 lb", "2,501–5,000 lb", "5,001–10,000 lb"],
     bases: ["Billable weight", "Actual weight", "Pallet count"],
   },
   flat_rate: {
-    appliesWhen: ["All shipments", "LTL shipments", "FTL shipments"],
     tiers: ["Base charge"],
     bases: ["Per shipment", "Per truck", "Per stop"],
   },
@@ -277,6 +289,7 @@ const shipmentModeByModule = {
   "shipments-air": "AIR",
 };
 const isShipmentModuleKey = (key) => Object.hasOwn(shipmentModeByModule, key);
+const EMPTY_VALUE = "-";
 const statusLabels = {
   in_review: "In review",
   confirmed: "Confirmed",
@@ -342,7 +355,7 @@ const statusTone = {
 };
 
 function formatStatus(status) {
-  return statusLabels[status] || status?.replaceAll("_", " ") || "—";
+  return statusLabels[status] || status?.replaceAll("_", " ") || EMPTY_VALUE;
 }
 
 function isConfirmedShipmentStatus(status) {
@@ -350,7 +363,7 @@ function isConfirmedShipmentStatus(status) {
 }
 
 function formatTransportMode(mode) {
-  return { TRUCKING: "Trucking", OCEAN: "Ocean", AIR: "Air" }[mode] || mode || "—";
+  return { TRUCKING: "Trucking", OCEAN: "Ocean", AIR: "Air" }[mode] || mode || EMPTY_VALUE;
 }
 
 function nextDemoIdentifier(records, field, prefix) {
@@ -366,7 +379,7 @@ function shipmentListStatus(status) {
 }
 
 function formatDate(value) {
-  if (!value) return "—";
+  if (!value) return EMPTY_VALUE;
   const source = String(value);
   const isoDate = source.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T)/);
   if (isoDate) return `${isoDate[1]}/${isoDate[2]}/${isoDate[3]}`;
@@ -382,7 +395,7 @@ function formatDate(value) {
 }
 
 function formatDateTime(value) {
-  if (!value) return "—";
+  if (!value) return EMPTY_VALUE;
   const source = String(value);
   const isoDateTime = source.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (isoDateTime) return `${isoDateTime[1]}/${isoDateTime[2]}/${isoDateTime[3]} ${isoDateTime[4]}:${isoDateTime[5]}`;
@@ -391,7 +404,7 @@ function formatDateTime(value) {
 
 function formatFileSize(value) {
   const bytes = Number(value);
-  if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+  if (!Number.isFinite(bytes) || bytes <= 0) return EMPTY_VALUE;
   if (bytes < 1024) return `${Math.round(bytes)} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   const megabytes = bytes / (1024 * 1024);
@@ -439,6 +452,24 @@ function buildShipmentBolDocuments(shipment, fieldValues = {}) {
 
 function formatBolCount(count) {
   return `${count} ${count === 1 ? "BOL" : "BOLs"}`;
+}
+
+function getShipmentOutputDocument(shipment, fieldValues = {}) {
+  if (shipment?.transportMode === "OCEAN") {
+    return {
+      code: "HBL",
+      label: "House Bill of Lading",
+      number: modeDetailValue(fieldValues, shipment, "mode.house.hblNo", "Pending"),
+    };
+  }
+  if (shipment?.transportMode === "AIR") {
+    return {
+      code: "HAWB",
+      label: "House Air Waybill",
+      number: modeDetailValue(fieldValues, shipment, "mode.house.hawbNo", "Pending"),
+    };
+  }
+  return { code: "BOL", label: "Bill of Lading", number: shipment?.bolNumber || "Pending" };
 }
 
 function formatMoney(value, currency = "USD") {
@@ -494,6 +525,17 @@ function sumChargeLines(result, adjustments = []) {
 
 function applyQuotationPlan(pricingResult, ratePlan) {
   if (!pricingResult || !ratePlan) return pricingResult;
+  if (pricingResult.ratePlanId !== ratePlan.quoteId) {
+    const replacementResult = createPricingResultFromRatePlan({
+      serviceType: pricingResult.chargeLines?.find((line) => line.code?.startsWith("BASE_"))?.code?.replace("BASE_", "") || "FREIGHT",
+    }, ratePlan);
+    return {
+      ...pricingResult,
+      ...replacementResult,
+      inputs: pricingResult.inputs,
+      vendorCost: pricingResult.vendorCost,
+    };
+  }
   const rateLane = pricingResult.inputs?.find((input) => input.label === "Rate lane")?.value;
   const billableWeightText = pricingResult.inputs?.find((input) => input.label === "Billable weight")?.value || "";
   const billableWeight = Number(billableWeightText.replace(/[^\d.]/g, ""));
@@ -543,6 +585,8 @@ function createPricingResultFromRatePlan(shipment, ratePlan) {
   const baseRule = ratePlan.rateMatrix?.[0];
   const baseAmount = Number(baseRule?.rate) || 0;
   const fixedSurcharges = (ratePlan.surchargeRules || []).filter((rule) => rule.unit !== "percent");
+  const transportServiceGroup = shipment.transportMode === "OCEAN" ? "Ocean" : shipment.transportMode === "AIR" ? "Air" : "Trucking";
+  const baseUnit = baseRule?.basis === "Per container" ? "CONTAINER" : baseRule?.basis === "Per truck" ? "TRUCK" : "SHIPMENT";
   return {
     ratePlanId: ratePlan.quoteId,
     currency: ratePlan.currency || "USD",
@@ -557,8 +601,9 @@ function createPricingResultFromRatePlan(shipment, ratePlan) {
         code: `BASE_${shipment.serviceType || "FREIGHT"}`,
         description: `Base ${shipment.serviceType || "freight"} charge`,
         source: baseRule.tier || baseRule.basis || "Configured rate",
-        templateKey: baseRule.basis === "Per truck" ? "flat_rate" : "tiered_rate",
-        serviceGroup: "Trucking",
+        templateKey: baseRule.basis?.startsWith("Per ") ? "flat_rate" : "tiered_rate",
+        serviceGroup: transportServiceGroup,
+        unit: baseUnit,
         amount: baseAmount,
       }] : []),
       ...fixedSurcharges.map((rule) => ({
@@ -566,7 +611,7 @@ function createPricingResultFromRatePlan(shipment, ratePlan) {
         description: rule.name,
         source: rule.templateLabel || "Per unit",
         templateKey: "per_unit",
-        serviceGroup: "Trucking",
+        serviceGroup: transportServiceGroup,
         quantity: 1,
         unit: rule.billingUnit || "SHIPMENT",
         unitPrice: Number(rule.rate) || 0,
@@ -805,10 +850,11 @@ function OverviewTab({ shipment, representative, pricingResult, ratePlan, ratePl
   );
 }
 
-function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOptions = [], selectedRatePlanId, onRatePlanChange, vendorRatePlanOptions = [], selectedVendorRatePlanId, onVendorRatePlanChange, adjustments = { customer: [], vendor: [] }, pricingLineOverrides = { customer: {}, vendor: {} }, onUpdatePricingLine, onAddAdjustment, onUpdateAdjustment, onRemoveAdjustment, onOpenRatePlan, onOpenVendorRatePlan, editing = false, actorLabel = "Demo user", showRatePlanControls = true }) {
+function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOptions = [], selectedRatePlanId, onRatePlanChange, vendorRatePlanOptions = [], selectedVendorRatePlanId, onVendorRatePlanChange, adjustments = { customer: [], vendor: [] }, pricingLineOverrides = { customer: {}, vendor: {} }, onUpdatePricingLine, onResetPricingSide, onAddAdjustment, onUpdateAdjustment, onRemoveAdjustment, onOpenRatePlan, onOpenVendorRatePlan, editing = false, actorLabel = "Demo user", showRatePlanControls = true }) {
   const [adjustmentSide, setAdjustmentSide] = useState("customer");
   const [adjustmentOpen, setAdjustmentOpen] = useState(false);
-  const [adjustmentDraft, setAdjustmentDraft] = useState({ description: "", unit: "SHIPMENT", unitPrice: "", note: "" });
+  const [adjustmentDraft, setAdjustmentDraft] = useState({ description: "", unit: "Shipment", unitPrice: "", note: "" });
+  const [pendingPlanChange, setPendingPlanChange] = useState(null);
   const currency = pricingResult?.currency || "USD";
   const customerAdjustments = adjustments.customer || [];
   const vendorAdjustments = adjustments.vendor || [];
@@ -836,7 +882,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
   };
   const closeAdjustment = () => {
     setAdjustmentOpen(false);
-    setAdjustmentDraft({ description: "", unit: "SHIPMENT", unitPrice: "", note: "" });
+    setAdjustmentDraft({ description: "", unit: "Shipment", unitPrice: "", note: "" });
   };
   const saveAdjustment = () => {
     if (!canSaveAdjustment) return;
@@ -844,7 +890,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
       adjustmentId: `ADJ-DEMO-${Date.now()}`,
       description: adjustmentDraft.description.trim(),
       quantity: 1,
-      unit: adjustmentDraft.unit.trim().toUpperCase(),
+      unit: formatPricingUnit(adjustmentDraft.unit.trim()),
       unitPrice: Number(adjustmentDraft.unitPrice),
       amount: Number(adjustmentDraft.unitPrice),
       note: adjustmentDraft.note.trim() || "No note provided.",
@@ -853,6 +899,68 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
     });
     closeAdjustment();
   };
+  const getPlanLabel = (side, planId) => {
+    const option = side === "customer"
+      ? ratePlanOptions.find((item) => item.quoteId === planId)
+      : vendorRatePlanOptions.find((item) => item.ratePlanId === planId);
+    if (!option) return "No plan selected";
+    return `${option.name} · v${option.version}`;
+  };
+  const requestPlanChange = (side, nextPlanId) => {
+    const currentPlanId = side === "customer"
+      ? selectedRatePlanId || ratePlan?.quoteId || ""
+      : displayedVendorRatePlanId;
+    if (!nextPlanId || nextPlanId === currentPlanId) return;
+    if (!currentPlanId || !pricingResult || !ratePlan) {
+      if (side === "customer") onRatePlanChange?.(nextPlanId);
+      else onVendorRatePlanChange?.(nextPlanId);
+      return;
+    }
+    setPendingPlanChange({ side, currentPlanId, nextPlanId });
+  };
+  const closePlanChange = () => setPendingPlanChange(null);
+  const applyPlanChange = () => {
+    if (!pendingPlanChange) return;
+    const { side, nextPlanId } = pendingPlanChange;
+    setPendingPlanChange(null);
+    onResetPricingSide?.(side);
+    if (side === "customer") onRatePlanChange?.(nextPlanId);
+    else onVendorRatePlanChange?.(nextPlanId);
+  };
+
+  const hasCustomer = Boolean(String(shipment.customer || "").trim());
+  if (!hasCustomer) {
+    const emptyLedgers = [
+      { key: "customer", title: "Customer Charge", description: "Accounts receivable and customer revenue.", planLabel: "Customer Quote" },
+      { key: "vendor", title: "Vendor Cost", description: "Accounts payable and carrier cost.", planLabel: "Carrier Rate" },
+    ];
+    return (
+      <section className="ledger-section pricing-section" aria-label="Shipment charges">
+        <div className="billing-ledger-stack is-empty">
+          {emptyLedgers.map((ledger) => (
+            <section className="billing-ledger-block" key={ledger.key} aria-labelledby={`${ledger.key}-ledger-heading`}>
+              <div className="billing-ledger-heading">
+                <div className="billing-ledger-title">
+                  <h3 id={`${ledger.key}-ledger-heading`}>{ledger.title}</h3>
+                  <p>{ledger.description}</p>
+                </div>
+                <div className="ledger-rate-plan-control is-view">
+                  <span className="ledger-rate-plan-label">{ledger.planLabel}</span>
+                  <span className="ledger-rate-plan-empty">{EMPTY_VALUE}</span>
+                </div>
+              </div>
+              <div className="fee-breakdown" role="table" aria-label={`${ledger.key} fee breakdown`}>
+                <div className="fee-breakdown-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Pricing details</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span></div>
+                <div className="fee-line-row fee-line-empty" role="row" aria-label={`${ledger.title} empty result`}>
+                  <span role="cell">{EMPTY_VALUE}</span><span role="cell">{EMPTY_VALUE}</span><span role="cell">{EMPTY_VALUE}</span><span role="cell">{EMPTY_VALUE}</span>
+                </div>
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   if (!pricingResult || !ratePlan) {
     return (
@@ -867,7 +975,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                 <Select
                   displayEmpty
                   value={selectedRatePlanId || ""}
-                  onChange={(event) => onRatePlanChange?.(event.target.value)}
+                  onChange={(event) => requestPlanChange("customer", event.target.value)}
                   inputProps={{ "aria-label": "Select customer quotation" }}
                   renderValue={(value) => value ? ratePlanOptions.find((option) => option.quoteId === value)?.name : "Select rate plan"}
                 >
@@ -882,7 +990,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
               <FormControl size="small" fullWidth>
                 <Select
                   value={displayedVendorRatePlanId}
-                  onChange={(event) => onVendorRatePlanChange?.(event.target.value)}
+                  onChange={(event) => requestPlanChange("vendor", event.target.value)}
                   inputProps={{ "aria-label": "Select carrier rate" }}
                   renderValue={(value) => vendorRatePlanOptions.find((option) => option.ratePlanId === value)?.name}
                 >
@@ -918,7 +1026,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                   <FormControl size="small">
                     <Select
                       value={selectedRatePlanId || ratePlan.quoteId}
-                      onChange={(event) => onRatePlanChange?.(event.target.value)}
+                      onChange={(event) => requestPlanChange("customer", event.target.value)}
                       inputProps={{ "aria-label": "Applied customer quotation" }}
                       MenuProps={{ MenuListProps: { "aria-label": "Applicable customer quotations" } }}
                     >
@@ -944,7 +1052,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                   <FormControl size="small">
                     <Select
                       value={displayedVendorRatePlanId}
-                      onChange={(event) => onVendorRatePlanChange?.(event.target.value)}
+                      onChange={(event) => requestPlanChange("vendor", event.target.value)}
                       inputProps={{ "aria-label": "Applied carrier rate" }}
                       MenuProps={{ MenuListProps: { "aria-label": "Applicable carrier rates" } }}
                       renderValue={(value) => vendorRatePlanOptions.find((option) => option.ratePlanId === value)?.name}
@@ -970,6 +1078,11 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
 
             <div className={editing ? "fee-breakdown is-editing" : "fee-breakdown"} role="table" aria-label={`${ledger.key} fee breakdown`}>
               <div className="fee-breakdown-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Pricing details</span><span role="columnheader">Unit</span><span role="columnheader">Unit price</span></div>
+              {ledger.lines.length === 0 && ledger.adjustments.length === 0 ? (
+                <div className="fee-breakdown-empty" role="row">
+                  <span role="cell">No charge items yet. Select Add item to create one.</span>
+                </div>
+              ) : null}
               {ledger.lines.map((line) => {
                 const template = ruleTemplates.find((item) => item.templateKey === line.templateKey);
                 const templateLabel = template?.label || "Standard template";
@@ -980,13 +1093,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                     <span role="cell"><strong>{line.description}</strong></span>
                     <span role="cell"><span className="fee-rule-template">{templateLabel}</span>{hasDistinctPricingSource ? <small>{pricingSource}</small> : null}</span>
                     <span className="fee-line-unit" role="cell">
-                      {editing ? (
-                        <TextInput
-                          aria-label={`${ledger.title} ${line.description} unit`}
-                          value={formatPricingUnit(line.unit)}
-                          onChange={(event) => onUpdatePricingLine?.(ledger.key, line.lineKey, { unit: event.target.value.toUpperCase() })}
-                        />
-                      ) : <>{line.quantity !== 1 ? `${Number(line.quantity).toLocaleString("en-US")} × ` : ""}{formatPricingUnit(line.unit)}</>}
+                      {line.quantity !== 1 ? `${Number(line.quantity).toLocaleString("en-US")} × ` : ""}{formatPricingUnit(line.unit)}
                     </span>
                     <span className={editing ? "fee-line-unit-price is-editing" : "fee-line-unit-price"} role="cell">
                       {editing ? (
@@ -1015,13 +1122,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                   <span role="cell"><strong>{adjustment.description}</strong><small>Manual adjustment</small></span>
                   <span role="cell">{adjustment.note}</span>
                   <span className="fee-line-unit" role="cell">
-                    {editing ? (
-                      <TextInput
-                        aria-label={`${adjustment.description} unit`}
-                        value={formatPricingUnit(adjustmentUnit)}
-                        onChange={(event) => onUpdateAdjustment?.(ledger.key, adjustment.adjustmentId, { unit: event.target.value.toUpperCase() })}
-                      />
-                    ) : formatPricingUnit(adjustmentUnit)}
+                    {formatPricingUnit(adjustmentUnit)}
                   </span>
                   <span className="fee-adjustment-amount" role="cell">
                     {editing ? (
@@ -1045,24 +1146,42 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
             </div>
             {editing ? (
               <div className="fee-breakdown-toolbar">
-                <Button size="small" variant="outlined" startIcon={<Plus size={16} />} onClick={() => openAdjustment(ledger.key)}>Add adjustment</Button>
+                <Button size="small" variant="outlined" startIcon={<Plus size={16} />} onClick={() => openAdjustment(ledger.key)}>Add item</Button>
               </div>
             ) : null}
           </section>
         ))}
       </div>
 
+      <Dialog open={Boolean(pendingPlanChange)} onClose={closePlanChange} maxWidth="sm" fullWidth aria-labelledby="replace-pricing-plan-title">
+        <DialogTitle id="replace-pricing-plan-title">Replace current {pendingPlanChange?.side === "customer" ? "Customer Quote" : "Carrier Rate"}?</DialogTitle>
+        <DialogContent dividers className="pricing-plan-change-content">
+          <p className="dialog-supporting-copy">
+            This replaces all {pendingPlanChange?.side === "customer" ? "Customer Charge" : "Vendor Cost"} fee items. {pendingPlanChange?.side === "customer" ? "Vendor Cost" : "Customer Charge"} stays unchanged.
+          </p>
+          <div className="pricing-plan-change-summary" aria-label="Pricing plan replacement">
+            <div><span>Current plan</span><strong>{getPlanLabel(pendingPlanChange?.side, pendingPlanChange?.currentPlanId)}</strong></div>
+            <ArrowRight size={18} aria-hidden="true" />
+            <div><span>New plan</span><strong>{getPlanLabel(pendingPlanChange?.side, pendingPlanChange?.nextPlanId)}</strong></div>
+          </div>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button variant="outlined" color="secondary" onClick={closePlanChange}>Cancel</Button>
+          <Button variant="contained" onClick={applyPlanChange}>Apply plan</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={adjustmentOpen} onClose={closeAdjustment} maxWidth="sm" fullWidth aria-labelledby="add-adjustment-title">
         <DialogTitle id="add-adjustment-title">Add {adjustmentSide === "customer" ? "Customer Charge" : "Vendor Cost"} Adjustment</DialogTitle>
         <DialogContent>
           <div className="adjustment-form">
             <TextInput aria-label="Fee item" label="Fee item" required value={adjustmentDraft.description} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, description: event.target.value }))} placeholder="Example: Detention" />
-            <TextInput aria-label="Unit" label="Unit" required value={adjustmentDraft.unit} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, unit: event.target.value.toUpperCase() }))} placeholder="Example: SHIPMENT" />
+            <TextInput aria-label="Unit" label="Unit" required value={adjustmentDraft.unit} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, unit: formatPricingUnit(event.target.value) }))} placeholder="Example: Shipment" />
             <TextInput aria-label={`Unit price (${currency})`} label={`Unit price (${currency})`} required type="number" inputProps={{ step: 0.01 }} value={adjustmentDraft.unitPrice} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, unitPrice: event.target.value }))} placeholder="0" helperText="Use a negative unit price for a credit." />
             <TextInput aria-label="Reason and note" label="Reason and note" multiline minRows={3} value={adjustmentDraft.note} onChange={(event) => setAdjustmentDraft((current) => ({ ...current, note: event.target.value }))} placeholder="Describe the operational exception and evidence." />
           </div>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}><Button variant="outlined" color="secondary" onClick={closeAdjustment}>Cancel</Button><Button variant="contained" disabled={!canSaveAdjustment} onClick={saveAdjustment}>Add adjustment</Button></DialogActions>
+        <DialogActions sx={{ px: 3, py: 2 }}><Button variant="outlined" color="secondary" onClick={closeAdjustment}>Cancel</Button><Button variant="contained" disabled={!canSaveAdjustment} onClick={saveAdjustment}>Add item</Button></DialogActions>
       </Dialog>
     </section>
   );
@@ -1177,7 +1296,7 @@ function FieldRecord({ field, value, onChange, editing, issueState, showReviewIs
       >
         {sourceTrigger}
         {!field.tableCell ? <span className="field-view-label">{field.label}</span> : null}
-        <strong className={`field-view-value ${hasValue ? "" : "is-empty"}`}>{hasValue ? displayValue : "—"}</strong>
+        <strong className={`field-view-value ${hasValue ? "" : "is-empty"}`}>{hasValue ? displayValue : EMPTY_VALUE}</strong>
         {hasActiveBlocker ? <small className="field-view-blocker"><CircleAlert size={13} />{blockerMessage}</small> : field.displayNote ? <small className="field-view-context">{field.displayNote}</small> : null}
       </div>
     );
@@ -1547,12 +1666,6 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
       { label: "Turnable", value: cargoBooleanValue(line.turnable), cargoKey: "turnable", cargoLineIndex: index, path: cargoFieldPath(line, index, "turnable"), control: "select", options: yesNoOptions, origin: "Customer document / Ops", stage: "Review", scope: "Conditional", subgroup: `Cargo item ${index + 1}` },
     ];
   });
-  const calculatedCargoTotals = calculateCargoTotals(cargoLines, (line) => line.lineId === originalCargoLineId
-    ? palletValue ?? line.handlingUnitCount ?? 0
-    : line.handlingUnitCount || 0);
-  const cargoTotalWeight = calculatedCargoTotals.totalWeight;
-  const cargoTotalHandlingUnits = calculatedCargoTotals.totalHandlingUnits;
-  const cargoTotalPackagePieces = calculatedCargoTotals.totalPackagesPieces;
   const customerOptions = partners.filter((partner) => partner.type === "customer").map((partner) => partner.name);
   const carrierOptions = partners.filter((partner) => partner.type === "carrier").map((partner) => partner.name);
   const sourceEvidenceByPath = representative ? {
@@ -1594,7 +1707,8 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
   const groups = [
     {
       id: "overview", label: "Overview", icon: LayoutList, description: "Core shipment context and identifiers.", fields: [
-        { label: "Customer", value: customer, path: "overview.customer", control: "autocomplete", options: customerOptions, fullWidth: true, origin: "Customer master / Ops", stage: "Draft", scope: "Core" },
+        { label: "Customer", value: customer, path: "overview.customer", control: "autocomplete", options: customerOptions, origin: "Customer master / Ops", stage: "Draft", scope: "Core" },
+        { label: "Shipment No.", value: shipment.shipmentId, path: "overview.shipmentNumber", displayOnly: true, origin: "System", stage: "Draft", scope: "Core" },
         { label: "Transport mode", value: formatTransportMode(job.overview.transportMode), path: "overview.transportMode", readOnly: true, origin: "System / Route plan", stage: "Draft", scope: "Core" },
         { label: "Service type", value: job.overview.serviceType, path: "overview.serviceType", control: "select", options: serviceTypeOptions, origin: "Customer document / Ops", stage: "Draft", scope: "Core" },
         { label: "Equipment Type", value: equipmentValue, path: "equipmentRequirements[0].type", control: "autocomplete", options: equipmentTypeOptions, freeSolo: true, origin: "Customer document / Ops", stage: "Review", scope: "Core" },
@@ -1837,7 +1951,7 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
                     <Tooltip title={`${blockerIssues.length} unresolved ${blockerIssues.length === 1 ? "blocker" : "blockers"}`} placement="right">
                       <span className="anchor-issue-count is-blocker" aria-label={`${blockerIssues.length} unresolved ${blockerIssues.length === 1 ? "blocker" : "blockers"}`}>{blockerIssues.length}</span>
                     </Tooltip>
-                  ) : <ChevronRight size={15} />}
+                  ) : null}
                 </button>
                 {group.id === "consignees" && routeStops.length > 1 ? (
                   <div className="field-index-subnav" aria-label="Consignee anchors">
@@ -1985,12 +2099,12 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
                                 const combinedCargoValue = (countKey, typeKey) => {
                                   const count = cargoFieldByKey[countKey] ? getFieldValue(cargoFieldByKey[countKey]) : "";
                                   const type = cargoFieldByKey[typeKey] ? getFieldValue(cargoFieldByKey[typeKey]) : "";
-                                  return [count, type].filter((value) => value !== "" && value !== null && value !== undefined).join(" ") || "—";
+                                  return [count, type].filter((value) => value !== "" && value !== null && value !== undefined).join(" ") || EMPTY_VALUE;
                                 };
                                 const joinedCargoValues = (cargoKeys) => cargoKeys.map((cargoKey) => {
                                   const field = cargoFieldByKey[cargoKey];
                                   const value = field ? getFieldValue(field) : "";
-                                  return value === "" || value === null || value === undefined ? "—" : value;
+                                  return value === "" || value === null || value === undefined ? EMPTY_VALUE : value;
                                 }).join(" / ");
                                 return (
                                   <div className="consignee-cargo-table-row" role="row" aria-label={`Cargo item ${consigneeCargoIndex + 1}`} key={line.lineId || lineIndex}>
@@ -2035,13 +2149,6 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
                       ) : null}
                     </section>
                     {showAddStop ? <div className="field-repeat-action"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addRouteStop}>Add stop</Button></div> : null}
-                    {group.id === "consignees" && isConsignee && routeStopIndex === routeStops.length - 1 ? (
-                      <div className="cargo-totals-footer" aria-label="Cargo totals">
-                        <div><span>Total Weight</span><strong>{Number(cargoTotalWeight || 0).toLocaleString()} {job.cargoTotals.shipmentTotalWeight.unit}</strong></div>
-                        <div><span>Total Handling Units</span><strong>{cargoTotalHandlingUnits}</strong></div>
-                        <div><span>Total Packages / Pieces</span><strong>{cargoTotalPackagePieces}</strong></div>
-                      </div>
-                    ) : null}
                   </Fragment>
                 );
               }) : <div className="field-grid">{group.fields.map((field) => <FieldRecord key={field.path} field={field} value={getFieldValue(field)} onChange={(value) => handleRenderedFieldChange(field, value)} editing={editing} issueState={issueState} showReviewIssues={representative} />)}</div>}
@@ -2145,7 +2252,7 @@ function SourceDocumentEvidencePreview({ source }) {
         <div className="source-sheet-table-scroll">
           <table className="source-sheet-table">
             <thead><tr>{source.preview.headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
-            <tbody>{source.preview.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={`${rowIndex}-${cellIndex}`}>{cell || "—"}</td>)}</tr>)}</tbody>
+            <tbody>{source.preview.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={`${rowIndex}-${cellIndex}`}>{cell || EMPTY_VALUE}</td>)}</tr>)}</tbody>
           </table>
         </div>
         <dl className="source-sheet-summary">
@@ -2208,6 +2315,10 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
   const previewSource = sources.find((source) => source.sourceId === previewSourceId);
   const canManageSources = editing;
   const bolDocuments = buildShipmentBolDocuments(shipment, fieldValues);
+  const modeOutput = getShipmentOutputDocument(shipment, fieldValues);
+  const modeOutputLabel = modeOutput.label;
+  const modeOutputNumber = modeOutput.number === "Pending" ? "" : modeOutput.number;
+  const isModeShipment = shipment.transportMode !== "TRUCKING";
 
   return (
     <div className="document-workspace">
@@ -2231,7 +2342,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
               <tr><th scope="col">Document</th><th scope="col">Uploaded by</th><th scope="col">Uploaded at</th><th scope="col"><span className="visually-hidden">Actions</span></th></tr>
             </thead>
             <tbody>
-              {sources.map((source) => {
+              {sources.length ? sources.map((source) => {
                 const SourceIcon = fileIcons[source.documentType] || File;
                 return (
                   <tr key={source.sourceId}>
@@ -2257,13 +2368,19 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
                     </td>
                   </tr>
                 );
-              })}
+              }) : (
+                <tr className="source-document-empty-row">
+                  <td colSpan={4}>
+                    <div className="source-document-empty-state"><FileSearch size={18} /><span>No reference documents yet.</span></div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </section>
       <section className="document-group" aria-labelledby="output-documents-heading">
-        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>One BOL is prepared for each consignee stop.</p></div><span>{`${bolDocuments.length} Docs`}</span></div>
+        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>{isModeShipment ? `${modeOutputLabel} output is prepared from the confirmed shipment details.` : "One BOL is prepared for each consignee stop."}</p></div><span>{`${isModeShipment ? 1 : bolDocuments.length} docs`}</span></div>
         <div className="source-document-table-scroll">
           <table className="source-document-table output-document-table">
             <colgroup><col className="output-document-column" /><col className="output-generated-at-column" /><col className="output-actions-column" /></colgroup>
@@ -2271,7 +2388,20 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
               <tr><th scope="col">Document</th><th scope="col">Generated at</th><th scope="col"><span className="visually-hidden">Actions</span></th></tr>
             </thead>
             <tbody>
-              {bolDocuments.map((stop, stopIndex) => {
+              {isModeShipment ? <tr>
+                <td>
+                  <div className="source-document-cell output-document-pending">
+                    <FileOutput size={18} />
+                    <span><strong>{modeOutputLabel}</strong><small>{modeOutputNumber || "Available after the house bill number is entered"}</small></span>
+                  </div>
+                </td>
+                <td>{modeOutputNumber ? <time dateTime={shipment.lastUpdated}>{formatDateTime(shipment.lastUpdated)}</time> : <span className="table-empty">{EMPTY_VALUE}</span>}</td>
+                <td>{modeOutputNumber ? (
+                  <Tooltip title={`Preview ${modeOutput.code}`} placement="top">
+                    <IconButton className="source-document-preview-button" aria-label={`Preview ${modeOutputLabel} ${modeOutputNumber}`} onClick={() => onOpenBol(shipment.shipmentId, null, fieldValues)}><ArrowUpRight size={16} /></IconButton>
+                  </Tooltip>
+                ) : <span className="table-empty">{EMPTY_VALUE}</span>}</td>
+              </tr> : bolDocuments.map((stop, stopIndex) => {
                 const stopLabel = `Consignee ${stopIndex + 1}`;
                 return <tr key={stop.stopId}>
                 <td>
@@ -2287,7 +2417,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
                     </div>
                   )}
                 </td>
-                <td>{bolAvailable ? <time dateTime={shipment.lastUpdated}>{formatDateTime(shipment.lastUpdated)}</time> : <span className="table-empty">—</span>}</td>
+                <td>{bolAvailable ? <time dateTime={shipment.lastUpdated}>{formatDateTime(shipment.lastUpdated)}</time> : <span className="table-empty">{EMPTY_VALUE}</span>}</td>
                 <td>
                   {bolAvailable ? (
                     <Tooltip title="Preview BOL" placement="top">
@@ -2543,6 +2673,259 @@ function SubmitConfirmation({ open, shipment, job, equipmentType, blockerCount, 
   );
 }
 
+const oceanServiceTypeOptions = selectOptions(["FCL", "LCL"]);
+const airAwbTypeOptions = selectOptions(["Consolidation", "Direct master"]);
+const airDimensionUnitOptions = selectOptions(["CM", "Inch", "Feet"]);
+
+function modeDetailValue(fieldValues, shipment, path, fallback = "") {
+  if (Object.prototype.hasOwnProperty.call(fieldValues, path)) return fieldValues[path];
+  const sourcePath = path.replace(/^mode\./, "").split(".");
+  const value = sourcePath.reduce((current, key) => current?.[key], shipment.modeDetails);
+  return value ?? fallback;
+}
+
+function calculateAirVolumeWeight(row) {
+  const length = Number(row.length);
+  const width = Number(row.width);
+  const height = Number(row.height);
+  const pieces = Number(row.pieces);
+  if (![length, width, height, pieces].every((value) => Number.isFinite(value) && value > 0)) return EMPTY_VALUE;
+  const cmFactor = row.unit === "Inch" ? 2.54 : row.unit === "Feet" ? 30.48 : 1;
+  return `${((length * cmFactor * width * cmFactor * height * cmFactor * pieces) / 6000).toLocaleString("en-US", { maximumFractionDigits: 1 })} KG`;
+}
+
+function formatModeDateInputValue(value = "", type = "date") {
+  const normalizedValue = String(value).trim();
+  if (type === "date") return toEnglishDateInputValue(normalizedValue);
+  const match = normalizedValue.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  return match ? `${match[2]}/${match[3]}/${match[1]} ${match[4]}:${match[5]}` : normalizedValue;
+}
+
+function parseModeDateInputValue(value = "", type = "date") {
+  const normalizedValue = String(value).trim();
+  if (type === "date") {
+    const match = normalizedValue.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return match ? `${match[3]}-${match[1]}-${match[2]}` : normalizedValue;
+  }
+  const match = normalizedValue.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
+  return match ? `${match[3]}-${match[1]}-${match[2]}T${match[4]}:${match[5]}` : normalizedValue;
+}
+
+function ModeField({ label, value, editing, onChange, type = "text", options, helperText, placeholder = EMPTY_VALUE, partnerOptions, displayOnly = false }) {
+  if (!editing || displayOnly) {
+    return (
+      <div className="mode-field-readonly">
+        <dt>{label}</dt>
+        <dd className={!value ? "is-empty" : undefined}>{value || EMPTY_VALUE}</dd>
+        {helperText && !value ? <small>{helperText}</small> : null}
+      </div>
+    );
+  }
+  if (type === "select") return <SelectInput label={label} value={value || ""} options={options || []} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} helperText={helperText} />;
+  if (type === "partner") return <AutocompleteInput label={label} value={value || ""} options={partnerOptions || []} onChange={(nextValue) => onChange(nextValue || "")} freeSolo placeholder={placeholder} helperText={helperText} />;
+  if (type === "date" || type === "datetime-local") {
+    const datePlaceholder = type === "date" ? "MM/DD/YYYY" : "MM/DD/YYYY HH:MM";
+    return (
+      <TextInput
+        label={label}
+        value={formatModeDateInputValue(value, type)}
+        type="text"
+        inputProps={{ lang: "en-US", inputMode: "numeric", autoComplete: "off" }}
+        onChange={(event) => onChange(parseModeDateInputValue(event.target.value, type))}
+        placeholder={datePlaceholder}
+        helperText={helperText}
+      />
+    );
+  }
+  return <TextInput label={label} value={value || ""} type={type} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} helperText={helperText} />;
+}
+
+function ModeSection({ id, title, icon: SectionIcon, fields, editing, fieldValues, shipment, onFieldChange, partnerOptions }) {
+  return (
+    <section className="field-form-section mode-form-section" id={`mode-section-${id}`} aria-labelledby={`mode-section-${id}-title`}>
+      <header className="field-section-heading">
+        <div className="field-section-icon"><SectionIcon size={17} /></div>
+        <div><h3 id={`mode-section-${id}-title`}>{title}</h3></div>
+      </header>
+      <dl className={`mode-form-grid ${editing ? "is-editing" : "is-viewing"}`}>
+        {fields.map((field) => (
+          <ModeField
+            key={field.path}
+            {...field}
+            value={modeDetailValue(fieldValues, shipment, field.path, field.fallback)}
+            editing={editing}
+            partnerOptions={partnerOptions}
+            onChange={(value) => onFieldChange(field.path, value)}
+          />
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+function OceanContainerTable({ shipment, fieldValues, editing, onFieldChange }) {
+  const containers = Object.prototype.hasOwnProperty.call(fieldValues, "mode.containers")
+    ? fieldValues["mode.containers"]
+    : shipment.modeDetails?.containers || [];
+  const updateRow = (rowIndex, key, value) => onFieldChange("mode.containers", containers.map((row, index) => index === rowIndex ? { ...row, [key]: value } : row));
+  const addRow = () => onFieldChange("mode.containers", [...containers, { containerNo: "", typeSize: "", sealNo: "", packages: "", weight: "", measurement: "" }]);
+  const removeRow = (rowIndex) => onFieldChange("mode.containers", containers.filter((_, index) => index !== rowIndex));
+  const columns = [
+    ["containerNo", "Container No."], ["typeSize", "Type / Size"], ["sealNo", "Seal No."],
+    ["packages", "PKG"], ["weight", "Weight"], ["measurement", "Measurement"],
+  ];
+  return (
+    <section className="field-form-section mode-form-section mode-line-section" id="mode-section-cargo" aria-labelledby="mode-section-cargo-title">
+      <header className="field-section-heading">
+        <div className="field-section-icon"><Package size={17} /></div>
+        <div><h3 id="mode-section-cargo-title">Container & Cargo</h3></div>
+      </header>
+      <div className="mode-line-table-scroll">
+        <table className="mode-line-table">
+          <thead><tr>{columns.map(([, label]) => <th key={label}>{label}</th>)}{editing ? <th><span className="visually-hidden">Actions</span></th> : null}</tr></thead>
+          <tbody>
+            {containers.length ? containers.map((row, rowIndex) => (
+              <tr key={`${row.containerNo || "container"}-${rowIndex}`}>
+                {columns.map(([key, label]) => <td key={key}>{editing ? <TextInput value={row[key] || ""} aria-label={`${label} ${rowIndex + 1}`} onChange={(event) => updateRow(rowIndex, key, event.target.value)} placeholder="Enter value" /> : row[key] || <span className="table-empty">{EMPTY_VALUE}</span>}</td>)}
+                {editing ? <td><IconButton color="error" aria-label={`Remove container ${rowIndex + 1}`} onClick={() => removeRow(rowIndex)}><Trash2 size={16} /></IconButton></td> : null}
+              </tr>
+            )) : <tr><td className="mode-line-empty" colSpan={columns.length + (editing ? 1 : 0)}>No container information yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {editing ? <div className="mode-line-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addRow}>Add container</Button></div> : null}
+    </section>
+  );
+}
+
+function AirDimensionTable({ shipment, fieldValues, editing, onFieldChange }) {
+  const dimensions = Object.prototype.hasOwnProperty.call(fieldValues, "mode.dimensions")
+    ? fieldValues["mode.dimensions"]
+    : shipment.modeDetails?.dimensions || [];
+  const updateRow = (rowIndex, key, value) => onFieldChange("mode.dimensions", dimensions.map((row, index) => index === rowIndex ? { ...row, [key]: value } : row));
+  const addRow = () => onFieldChange("mode.dimensions", [...dimensions, { length: "", width: "", height: "", pieces: "", unit: "CM" }]);
+  const removeRow = (rowIndex) => onFieldChange("mode.dimensions", dimensions.filter((_, index) => index !== rowIndex));
+  return (
+    <section className="field-form-section mode-form-section mode-line-section" id="mode-section-dimensions" aria-labelledby="mode-section-dimensions-title">
+      <header className="field-section-heading">
+        <div className="field-section-icon"><Package size={17} /></div>
+        <div><h3 id="mode-section-dimensions-title">Cargo</h3></div>
+      </header>
+      <div className="mode-line-table-scroll">
+        <table className="mode-line-table mode-dimension-table">
+          <thead><tr><th>Length</th><th>Width</th><th>Height</th><th>Pieces</th><th>Unit</th><th>Volume weight</th>{editing ? <th><span className="visually-hidden">Actions</span></th> : null}</tr></thead>
+          <tbody>
+            {dimensions.length ? dimensions.map((row, rowIndex) => (
+              <tr key={`dimension-${rowIndex}`}>
+                {["length", "width", "height", "pieces"].map((key) => <td key={key}>{editing ? <TextInput value={row[key] || ""} type="number" aria-label={`${key} ${rowIndex + 1}`} onChange={(event) => updateRow(rowIndex, key, event.target.value)} placeholder="0" /> : row[key] || <span className="table-empty">{EMPTY_VALUE}</span>}</td>)}
+                <td>{editing ? <SelectInput value={row.unit || "CM"} aria-label={`Unit ${rowIndex + 1}`} options={airDimensionUnitOptions} onChange={(event) => updateRow(rowIndex, "unit", event.target.value)} /> : row.unit || "CM"}</td>
+                <td className="mode-derived-value">{calculateAirVolumeWeight(row)}</td>
+                {editing ? <td><IconButton color="error" aria-label={`Remove dimensions ${rowIndex + 1}`} onClick={() => removeRow(rowIndex)}><Trash2 size={16} /></IconButton></td> : null}
+              </tr>
+            )) : <tr><td className="mode-line-empty" colSpan={editing ? 7 : 6}>No dimensions yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+      {editing ? <div className="mode-line-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addRow}>Add dimensions</Button></div> : null}
+    </section>
+  );
+}
+
+function ModeShipmentFields({ shipment, fieldValues, onFieldChange, editing, partners }) {
+  const [activeSection, setActiveSection] = useState("overview");
+  const ocean = shipment.transportMode === "OCEAN";
+  const partnerOptions = partners.filter((partner) => partner.type === "customer").map((partner) => partner.name);
+  const sections = ocean ? [
+    ["overview", "Overview", LayoutList], ["master", "Master transport", Ship], ["house", "House shipment", FileText], ["cargo", "Container & cargo", Package],
+  ] : [
+    ["overview", "Overview", LayoutList], ["master", "Master transport", Plane], ["house", "House shipment", FileText], ["dimensions", "Cargo", Package],
+  ];
+  const overviewFields = [
+    { path: "overview.customer", label: "Customer", type: "partner", fallback: shipment.customer },
+    { path: "overview.shipmentNumber", label: "Shipment No.", fallback: shipment.shipmentNumber || shipment.shipmentId, placeholder: "Enter shipment no." },
+    { path: "mode.customerReference", label: "Customer Ref. / PO" },
+    { path: "overview.serviceType", label: "Service Type", type: "select", options: ocean ? oceanServiceTypeOptions : selectOptions(["Air Freight"]), fallback: shipment.serviceType },
+    { path: "mode.billTo", label: "Bill To", type: "partner" },
+  ];
+  const masterFields = ocean ? [
+    { path: "mode.master.mblNo", label: "MB/L No." },
+    { path: "mode.master.overseasAgent", label: "Overseas Agent" },
+    { path: "mode.master.carrier", label: "Carrier" },
+    { path: "mode.master.blAccount", label: "B/L Account" },
+    { path: "mode.master.pol", label: "Port of Loading" },
+    { path: "mode.master.pod", label: "Port of Discharge" },
+    { path: "mode.master.vessel", label: "Vessel" },
+    { path: "mode.master.voyage", label: "Voyage" },
+    { path: "mode.master.etd", label: "ETD", type: "date" },
+    { path: "mode.master.eta", label: "ETA", type: "date", helperText: "Can be updated when the arrival schedule changes." },
+    { path: "mode.master.cyCfsLocation", label: "CY / CFS Location", helperText: "May remain blank until the arrival notice is received." },
+  ] : [
+    { path: "mode.master.mawbNo", label: "MAWB No." },
+    { path: "mode.master.awbType", label: "AWB Type", type: "select", options: airAwbTypeOptions },
+    { path: "mode.master.carrier", label: "Carrier" },
+    { path: "mode.master.coLoader", label: "Co-loader" },
+    { path: "mode.master.departureAirport", label: "Departure Airport" },
+    { path: "mode.master.destinationAirport", label: "Destination Airport" },
+    { path: "mode.master.flightNo", label: "Flight No." },
+    { path: "mode.master.connectingFlight", label: "Connecting Flight" },
+    { path: "mode.master.etd", label: "ETD", type: "datetime-local" },
+    { path: "mode.master.eta", label: "ETA", type: "datetime-local", helperText: "Can be updated when the flight schedule changes." },
+  ];
+  const houseFields = ocean ? [
+    { path: "mode.house.hblNo", label: "HB/L No." },
+    { path: "mode.house.amsNo", label: "AMS No." },
+    { path: "mode.house.shipper", label: "Shipper" },
+    { path: "mode.house.consignee", label: "Consignee" },
+    { path: "mode.house.notifyParty", label: "Notify Party" },
+    { path: "mode.house.placeOfDelivery", label: "Place of Delivery" },
+    { path: "mode.house.placeOfDeliveryEta", label: "Place of Delivery ETA", type: "date", helperText: "May remain blank until destination handling is confirmed." },
+    { path: "mode.house.deliveryLocation", label: "Delivery Location" },
+    { path: "mode.house.cyCfsLocation", label: "CY / CFS Location", helperText: "Initially copied from the master transport record." },
+    { path: "mode.house.mark", label: "Mark" },
+    { path: "mode.house.description", label: "Description" },
+  ] : [
+    { path: "mode.house.hawbNo", label: "HAWB No." },
+    { path: "mode.house.shipper", label: "Shipper" },
+    { path: "mode.house.consignee", label: "Consignee" },
+    { path: "mode.house.notifyParty", label: "Notify Party" },
+    { path: "mode.house.incoterms", label: "Incoterms" },
+    { path: "mode.house.serviceTerm", label: "Service Term" },
+    { path: "mode.house.shipType", label: "Ship Type" },
+    { path: "mode.house.arrivalDateTime", label: "Arrival Date / Time", type: "datetime-local", helperText: "May remain blank until the airline confirms arrival." },
+    { path: "mode.house.destinationHandlingLocation", label: "Destination Handling Location", helperText: "May remain blank until destination handling is confirmed." },
+    { path: "mode.house.commodity", label: "Commodity" },
+    { path: "mode.house.mark", label: "Mark" },
+    { path: "mode.house.packages", label: "Package" },
+    { path: "mode.house.grossWeight", label: "Gross Weight" },
+    { path: "mode.house.chargeableWeight", label: "Chargeable Weight" },
+    { path: "mode.house.volumeWeight", label: "Volume Weight" },
+  ];
+  const scrollToSection = (id) => {
+    setActiveSection(id);
+    document.getElementById(`mode-section-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  return (
+    <div className="fields-workspace mode-fields-workspace">
+      <aside className="field-index" aria-label={`${formatTransportMode(shipment.transportMode)} shipment sections`}>
+        <nav aria-label={`${formatTransportMode(shipment.transportMode)} field sections`}>
+          {sections.map(([id, label, SectionIcon]) => (
+            <button key={id} type="button" className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "location" : undefined} onClick={() => scrollToSection(id)}>
+              <SectionIcon size={16} />
+              <span className="field-index-copy"><strong>{label}</strong></span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+      <div className="field-sheet mode-field-sheet">
+        <ModeSection id="overview" title="Overview" icon={LayoutList} fields={overviewFields} {...{ editing, fieldValues, shipment, onFieldChange, partnerOptions }} />
+        <ModeSection id="master" title="Master Transport" icon={ocean ? Ship : Plane} fields={masterFields} {...{ editing, fieldValues, shipment, onFieldChange, partnerOptions }} />
+        <ModeSection id="house" title="House Shipment" icon={FileText} fields={houseFields} {...{ editing, fieldValues, shipment, onFieldChange, partnerOptions }} />
+        {ocean ? <OceanContainerTable {...{ shipment, fieldValues, editing, onFieldChange }} /> : <AirDimensionTable {...{ shipment, fieldValues, editing, onFieldChange }} />}
+      </div>
+    </div>
+  );
+}
+
 function ShipmentPanel({
   shipment,
   partners,
@@ -2568,6 +2951,7 @@ function ShipmentPanel({
   manualAdjustments,
   pricingLineOverrides,
   onUpdatePricingLine,
+  onResetPricingSide,
   onRestorePricingLineOverrides,
   onAddAdjustment,
   onUpdateAdjustment,
@@ -2585,6 +2969,8 @@ function ShipmentPanel({
   const [sourcePanelRequest, setSourcePanelRequest] = useState(0);
   const [editing, setEditing] = useState(initialEditing);
   const [shipmentActionAnchorEl, setShipmentActionAnchorEl] = useState(null);
+  const [outputDocumentGenerating, setOutputDocumentGenerating] = useState(false);
+  const outputGenerationTimerRef = useRef(null);
   const [selectedRatePlanId, setSelectedRatePlanId] = useState(() => Object.prototype.hasOwnProperty.call(initialRateSelection || {}, "customer")
     ? initialRateSelection.customer
     : pricingResults[shipment.shipmentId]?.ratePlanId || "");
@@ -2666,10 +3052,10 @@ function ShipmentPanel({
     : representative
       ? issueState["ISSUE-MISSING-001"]?.value || ""
       : "Dry Van";
-  const shipmentSourceSet = representative
-    ? fixture.sourceSet
-    : createdWithoutSourceDocuments
-      ? []
+  const shipmentSourceSet = shipment.transportMode !== "TRUCKING" || createdWithoutSourceDocuments
+    ? []
+    : representative
+      ? fixture.sourceSet
       : fixture.sourceSet.map((source, index) => {
         const { preview, previewKind, previewUrl, sourceUrl, ...sourceWithoutProvidedEvidence } = source;
         return {
@@ -2705,8 +3091,12 @@ function ShipmentPanel({
   };
   const storedPricingResult = pricingResults[shipment.shipmentId];
   const appliedVendorRatePlanId = storedPricingResult?.vendorCost?.ratePlanId || "";
-  const pricingCustomer = fieldValues["overview.customer"] || shipment.customer;
-  const assignedCarrier = fieldValues["carrierAssignment.carrier"] || fixture.jobDraft.carrierAssignment.carrier || "";
+  const pricingCustomer = Object.prototype.hasOwnProperty.call(fieldValues, "overview.customer")
+    ? fieldValues["overview.customer"]
+    : shipment.customer;
+  const assignedCarrier = shipment.transportMode === "TRUCKING"
+    ? fieldValues["carrierAssignment.carrier"] || fixture.jobDraft.carrierAssignment.carrier || ""
+    : fieldValues["mode.master.carrier"] || shipment.modeDetails?.master?.carrier || "";
   const ratePlanOptions = useMemo(() => quotePlans.filter((quote) => quote.customer === pricingCustomer
     && quote.transportMode === shipment.transportMode
     && (quote.status === "accepted" || quote.quoteId === storedPricingResult?.ratePlanId)), [quotePlans, pricingCustomer, shipment.transportMode, storedPricingResult?.ratePlanId]);
@@ -2806,11 +3196,24 @@ function ShipmentPanel({
   const draftSubmissionAvailable = shipment.listStatus === "draft" && !committed;
   const billingWorkspaceAvailable = true;
   const contentEditing = editing && (draftSubmissionAvailable || billingWorkspaceAvailable);
+  const outputDocument = getShipmentOutputDocument(shipment, fieldValues);
+  const generateOutputDocument = () => {
+    if (outputDocumentGenerating) return;
+    setOutputDocumentGenerating(true);
+    outputGenerationTimerRef.current = window.setTimeout(() => {
+      onExportBol(shipment.shipmentId, fieldValues);
+      setOutputDocumentGenerating(false);
+      outputGenerationTimerRef.current = null;
+    }, 900);
+  };
+  useEffect(() => () => {
+    if (outputGenerationTimerRef.current) window.clearTimeout(outputGenerationTimerRef.current);
+  }, []);
 
   return (
     <>
       <DetailPageFrame
-      title={shipment.shipmentId}
+      title={shipment.shipmentNumber || shipment.shipmentId}
       meta={`${formatTransportMode(shipment.transportMode)} · ${shipment.serviceType}`}
       onClose={onClose}
       lastUpdated={formatDateTime(shipment.lastUpdated)}
@@ -2824,7 +3227,15 @@ function ShipmentPanel({
         </> : <>
           <ShipmentProgressControl shipment={shipment} onChange={onStatusChange} />
           <Button variant="outlined" startIcon={<PenLine size={16} />} onClick={beginEditing}>Edit</Button>
-          <Button variant="contained" startIcon={<FileOutput size={17} />} onClick={() => onExportBol(shipment.shipmentId, fieldValues)}>Export BOL</Button>
+          <Button
+            variant="contained"
+            disabled={outputDocumentGenerating}
+            aria-busy={outputDocumentGenerating}
+            startIcon={outputDocumentGenerating ? <CircularProgress size={16} color="inherit" /> : <FileOutput size={17} />}
+            onClick={generateOutputDocument}
+          >
+            {outputDocumentGenerating ? "Generating…" : outputDocument.code}
+          </Button>
         </>}
       </> : null}
         {!editing ? <>
@@ -2859,7 +3270,7 @@ function ShipmentPanel({
               }}
             >
               <Trash2 size={16} aria-hidden="true" />
-              Delete shipment
+              Delete
             </MenuItem>
           </Menu>
         </> : null}
@@ -2890,7 +3301,7 @@ function ShipmentPanel({
                   <div>Shipment details that affect pricing have changed. Recalculate to refresh Customer Charge and Vendor Cost.</div>
                 </Alert>
               ) : null}
-              <ShipmentPricingSection shipment={{ ...shipment, customer: pricingCustomer }} pricingResult={appliedPricingResult} ratePlan={relatedQuote} ratePlanOptions={ratePlanOptions} selectedRatePlanId={selectedRatePlanId} onRatePlanChange={changeCustomerRatePlan} vendorRatePlanOptions={vendorRatePlanOptions} selectedVendorRatePlanId={selectedVendorRatePlanId} onVendorRatePlanChange={changeVendorRatePlan} adjustments={manualAdjustments} pricingLineOverrides={pricingLineOverrides} onUpdatePricingLine={onUpdatePricingLine} onAddAdjustment={onAddAdjustment} onUpdateAdjustment={onUpdateAdjustment} onRemoveAdjustment={onRemoveAdjustment} onOpenRatePlan={onOpenQuote} onOpenVendorRatePlan={onOpenCarrierRate} editing={contentEditing} actorLabel="Demo user" />
+              <ShipmentPricingSection shipment={{ ...shipment, customer: pricingCustomer }} pricingResult={appliedPricingResult} ratePlan={relatedQuote} ratePlanOptions={ratePlanOptions} selectedRatePlanId={selectedRatePlanId} onRatePlanChange={changeCustomerRatePlan} vendorRatePlanOptions={vendorRatePlanOptions} selectedVendorRatePlanId={selectedVendorRatePlanId} onVendorRatePlanChange={changeVendorRatePlan} adjustments={manualAdjustments} pricingLineOverrides={pricingLineOverrides} onUpdatePricingLine={onUpdatePricingLine} onResetPricingSide={onResetPricingSide} onAddAdjustment={onAddAdjustment} onUpdateAdjustment={onUpdateAdjustment} onRemoveAdjustment={onRemoveAdjustment} onOpenRatePlan={onOpenQuote} onOpenVendorRatePlan={onOpenCarrierRate} editing={contentEditing} actorLabel="Demo user" />
             </section>
           ) : <>
           <section className={`single-page-section ${contentEditing ? "is-editing" : "is-viewing"}`} id="job-fields-section" aria-labelledby="job-fields-section-title">
@@ -2908,7 +3319,7 @@ function ShipmentPanel({
                 {sourceDocuments.length} sources
               </Button>
             </div>
-            <JobFieldsTab
+            {shipment.transportMode === "TRUCKING" ? <JobFieldsTab
               shipment={shipment}
               issueState={issueState}
               fieldValues={fieldValues}
@@ -2935,7 +3346,22 @@ function ShipmentPanel({
                 setSourcePanelRequest(0);
                 window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
               }}
-            />
+            /> : <ModeShipmentFields
+              shipment={shipment}
+              fieldValues={fieldValues}
+              editing={contentEditing}
+              partners={partners}
+              onFieldChange={(path, value) => {
+                const previousValue = modeDetailValue(fieldValues, shipment, path);
+                setFieldValues((current) => ({ ...current, [path]: value }));
+                const pricingRelevant = path === "overview.customer"
+                  || path === "overview.serviceType"
+                  || path.includes("weight")
+                  || path === "mode.containers"
+                  || path === "mode.dimensions";
+                if (pricingRelevant && JSON.stringify(previousValue) !== JSON.stringify(value)) setPricingNeedsRecalculation(true);
+              }}
+            />}
           </section>
 
           </>}
@@ -2945,7 +3371,7 @@ function ShipmentPanel({
   );
 }
 
-function CreateShipmentDialog({ open, onClose, onExtract, onManual, onStartExisting, existingShipments = [] }) {
+function CreateShipmentDialog({ open, onClose, onExtract, onManual, onStartExisting, existingShipments = [], targetMode = "TRUCKING" }) {
   const [startMethod, setStartMethod] = useState("documents");
   const [dragActive, setDragActive] = useState(false);
   const [files, setFiles] = useState([]);
@@ -3067,7 +3493,7 @@ function CreateShipmentDialog({ open, onClose, onExtract, onManual, onStartExist
   return (
     <Dialog open={open} onClose={extracting ? undefined : onClose} maxWidth="md" aria-labelledby="create-shipment-dialog-title" fullWidth className="create-shipment-dialog" slotProps={{ paper: { sx: { minHeight: { xs: "calc(100dvh - 32px)", sm: 640 }, maxHeight: "calc(100dvh - 32px)", borderRadius: 1.25 }, "aria-busy": extracting } }}>
       <DialogTitle id="create-shipment-dialog-title" sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 2, px: 3, pt: 3, pb: 1.5 }}>
-        <Box component="span" sx={{ color: "text.primary", fontSize: 20, lineHeight: "28px", fontWeight: 700 }}>Create Shipment</Box>
+        <Box component="span" sx={{ color: "text.primary", fontSize: 20, lineHeight: "28px", fontWeight: 700 }}>Create {formatTransportMode(targetMode)} Shipment</Box>
         <IconButton aria-label="Close create shipment" disabled={extracting} onClick={onClose} sx={{ mt: -.5, mr: -.5 }}><X size={19} /></IconButton>
       </DialogTitle>
       <DialogContent className="create-shipment-dialog-content">
@@ -3336,7 +3762,7 @@ function QuotationPreviewDialog({ quote, onClose }) {
               <span className="quotation-document-logo">B</span>
               <div>
                 <strong>BEST USA LOGISTICS INC</strong>
-                <small>Freight Forwarding &amp; Logistics</small>
+                <small>Freight &amp; Logistics</small>
                 <small>Los Angeles, California · +1 310 555 0188</small>
               </div>
             </div>
@@ -3361,7 +3787,7 @@ function QuotationPreviewDialog({ quote, onClose }) {
             </div>
             <table>
               <thead>
-                <tr><th>Description</th><th>Applies when</th>{usesServiceItems ? <><th>Qty</th><th>Unit</th></> : <th>Configuration</th>}<th>{usesServiceItems ? "Unit rate" : "Rate"}</th>{usesServiceItems ? <th>Subtotal</th> : null}</tr>
+                <tr><th>Description</th><th>{usesServiceItems ? "Transport mode" : "Equipment Type"}</th>{usesServiceItems ? <><th>Qty</th><th>Unit</th></> : <th>Configuration</th>}<th>{usesServiceItems ? "Unit rate" : "Rate"}</th>{usesServiceItems ? <th>Subtotal</th> : null}</tr>
               </thead>
               <tbody>
                 {usesServiceItems ? (quote.serviceItems || []).map((item) => (
@@ -3378,7 +3804,7 @@ function QuotationPreviewDialog({ quote, onClose }) {
                     {(quote.rateMatrix || []).map((rule, index) => (
                       <tr key={rule.ruleId || `${rule.lane}-${rule.tier}-${index}`}>
                         <td>{rule.templateLabel || "Base freight"}</td>
-                        <td>{rule.lane}</td>
+                        <td>{rule.equipmentType || "—"}</td>
                         <td>{rule.tier} · {rule.basis}</td>
                         <td>{formatMoney(rule.rate, quote.currency)}</td>
                       </tr>
@@ -3466,6 +3892,14 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
   const hasServiceItems = (displayedQuote.serviceItems || []).length > 0;
   const usesServiceItems = hasServiceItems && displayedQuote.rateMatrix.length === 0 && displayedQuote.surchargeRules.length === 0;
   const updateDraftField = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
+  const updateTransportMode = (transportMode) => setDraft((current) => ({
+    ...current,
+    transportMode,
+    rateMatrix: current.rateMatrix.map((rule) => ({
+      ...rule,
+      equipmentType: getQuotationEquipmentTypeOptions(transportMode)[0],
+    })),
+  }));
   const updateRule = (collection, index, field, value) => setDraft((current) => ({
     ...current,
     [collection]: current[collection].map((rule, ruleIndex) => ruleIndex === index ? { ...rule, [field]: value } : rule),
@@ -3475,7 +3909,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
     && draft.quoteId.trim()
     && draft.currency
     && draft.transportMode
-    && draft.rateMatrix.every((rule) => rule.templateKey && rule.lane.trim() && rule.tier.trim() && rule.basis.trim() && Number(rule.rate) > 0)
+    && draft.rateMatrix.every((rule) => rule.templateKey && rule.equipmentType?.trim() && rule.tier.trim() && rule.basis.trim() && Number(rule.rate) > 0)
     && draft.surchargeRules.every((rule) => rule.templateKey && rule.name.trim() && rule.billingUnit && Number(rule.rate) > 0)
     && draft.serviceItems.every((item) => item.name.trim() && Number(item.quantity) > 0 && item.unit && Number(item.rate) > 0));
   const startEditing = () => {
@@ -3549,7 +3983,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
     const ruleId = `BASE_CUSTOM_${Date.now()}`;
     setDraft((current) => ({
       ...current,
-      rateMatrix: [...current.rateMatrix, { ruleId, lane: "", tier: "", basis: "", rate: "", unit: "", templateKey: "", templateLabel: "" }],
+      rateMatrix: [...current.rateMatrix, { ruleId, lane: "", equipmentType: "", tier: "", basis: "", rate: "", unit: "", templateKey: "", templateLabel: "" }],
     }));
     window.requestAnimationFrame(() => document.querySelector(`[data-base-rule-id="${ruleId}"] [role="combobox"]`)?.focus());
   };
@@ -3568,7 +4002,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
         templateKey,
         templateLabel: template.label,
         unit: template.defaultUnit,
-        lane: fields.appliesWhen[0],
+        equipmentType: rule.equipmentType || getQuotationEquipmentTypeOptions(current.transportMode)[0],
         tier: fields.tiers[0],
         basis: fields.bases[0],
         rate: "",
@@ -3689,7 +4123,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
               }}
             >
               <Trash2 size={16} aria-hidden="true" />
-              Delete quotation
+              Delete
             </MenuItem>
           </Menu>
         </>
@@ -3700,7 +4134,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
       hideBack={editing}
     >
       <div className="panel-stack quotation-panel-stack">
-        {!isCreating ? <Alert className="rate-scope-alert" severity="info" variant="outlined" icon={<Info size={18} />}>
+        {!isCreating && displayedQuote.status === "accepted" ? <Alert className="rate-scope-alert" severity="info" variant="outlined" icon={<Info size={18} />}>
           Applies to {formatTransportMode(displayedQuote.transportMode)} shipments for {displayedQuote.customer}
         </Alert> : null}
         <section className="ledger-section quotation-card quotation-overview-card">
@@ -3714,7 +4148,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                 required
                 options={quotationShipmentModeOptions}
                 value={draft.transportMode}
-                onChange={(event) => updateDraftField("transportMode", event.target.value)}
+                onChange={(event) => updateTransportMode(event.target.value)}
                 placeholder="Select transport mode"
               />
               <TextInput label="Quote No." required value={draft.quoteId} onChange={(event) => updateDraftField("quoteId", event.target.value)} />
@@ -3768,7 +4202,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
           <div className="quotation-rule-group">
           <div className="section-heading"><h2>Base Pricing</h2>{editing ? <div className="section-heading-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addBaseRule}>Add rule</Button></div> : null}</div>
           <div className={`rate-rule-table rate-matrix-table ${editing ? "is-editing" : ""}`} role="table" aria-label="Customer rate matrix">
-            <div className="rate-rule-head" role="row"><span role="columnheader">Rule template</span><span role="columnheader">Applies when</span><span role="columnheader">Configuration</span><span role="columnheader">Rate</span>{editing ? <span role="columnheader" aria-label="Actions" /> : null}</div>
+            <div className="rate-rule-head" role="row"><span role="columnheader">Rule template</span><span role="columnheader">Equipment Type</span><span role="columnheader">Configuration</span><span role="columnheader">Rate</span>{editing ? <span role="columnheader" aria-label="Actions" /> : null}</div>
             {displayedQuote.rateMatrix.length === 0 ? (
               <div className="rate-rule-empty" role="row">
                 <span role="cell">{editing ? "No base pricing rules yet. Select Add rule to create one." : "No base pricing rules available."}</span>
@@ -3776,6 +4210,11 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
             ) : null}
             {displayedQuote.rateMatrix.map((rule, index) => {
               const fieldOptions = baseRuleFieldOptions[rule.templateKey];
+              const configurationOptions = rule.templateKey === "tiered_rate"
+                ? (fieldOptions?.tiers || []).map((tier) => ({ value: `${tier}::${rule.basis || fieldOptions.bases[0]}`, label: tier }))
+                : rule.templateKey === "flat_rate"
+                  ? (fieldOptions?.bases || []).map((basis) => ({ value: `${rule.tier || fieldOptions.tiers[0]}::${basis}`, label: basis }))
+                  : (fieldOptions?.tiers || []).flatMap((tier) => (fieldOptions?.bases || []).map((basis) => ({ value: `${tier}::${basis}`, label: `${tier} · ${basis}` })));
               return editing ? (
               <div role="row" key={rule.ruleId || `${rule.templateKey}-${index}`} data-base-rule-id={rule.ruleId || `base-rule-${index + 1}`}>
                 <span role="cell" className="rule-type-edit-cell">
@@ -3789,12 +4228,12 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   <small>{ruleTemplates.find((template) => template.templateKey === rule.templateKey)?.description || "Choose a base calculation pattern."}</small>
                 </span>
                 <SelectInput
-                  value={rule.lane}
+                  value={rule.equipmentType || ""}
                   disabled={!fieldOptions}
-                  placeholder={fieldOptions ? "Select condition" : "Select type first"}
-                  inputProps={{ "aria-label": `Base rule ${index + 1} applies when` }}
-                  onChange={(event) => updateRule("rateMatrix", index, "lane", event.target.value)}
-                  options={(fieldOptions?.appliesWhen || []).map((option) => ({ value: option, label: option }))}
+                  placeholder={fieldOptions ? "Select equipment" : "Select type first"}
+                  inputProps={{ "aria-label": `Base rule ${index + 1} equipment type` }}
+                  onChange={(event) => updateRule("rateMatrix", index, "equipmentType", event.target.value)}
+                  options={getQuotationEquipmentTypeOptions(displayedQuote.transportMode).map((option) => ({ value: option, label: option }))}
                 />
                 <SelectInput
                   value={fieldOptions ? `${rule.tier}::${rule.basis}` : ""}
@@ -3802,7 +4241,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   placeholder={fieldOptions ? "Select configuration" : "Select type first"}
                   inputProps={{ "aria-label": `Base rule ${index + 1} configuration` }}
                   onChange={(event) => updateBaseRuleConfiguration(index, event.target.value)}
-                  options={(fieldOptions?.tiers || []).flatMap((tier) => (fieldOptions?.bases || []).map((basis) => ({ value: `${tier}::${basis}`, label: `${tier} · ${basis}` })))}
+                  options={configurationOptions}
                 />
                 <div className="rule-pricing-edit-cell">
                   <TextInput aria-label={`Base rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("rateMatrix", index, "rate", event.target.value)} />
@@ -3810,7 +4249,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                 </div>
                 <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete base rule ${index + 1}`} onClick={() => removeBaseRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
               </div>
-            ) : <div role="row" key={rule.ruleId || `${rule.lane}-${rule.tier}`}><span role="cell"><strong>{rule.templateLabel}</strong></span><span role="cell">{rule.lane}</span><span role="cell">{rule.tier} · {rule.basis}</span><strong role="cell">{formatMoney(rule.rate, displayedQuote.currency)}</strong></div>;
+            ) : <div role="row" key={rule.ruleId || `${rule.lane}-${rule.tier}`}><span role="cell">{rule.templateLabel}</span><span role="cell">{rule.equipmentType || "—"}</span><span role="cell">{rule.tier} · {rule.basis}</span><strong role="cell">{formatMoney(rule.rate, displayedQuote.currency)}</strong></div>;
             })}
           </div>
           </div>
@@ -3848,7 +4287,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                 </div>
                 <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete ${rule.name || `additional rule ${index + 1}`}`} onClick={() => removeDraftRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
               </div>
-            ) : <div role="row" key={rule.code}><span role="cell"><strong>{rule.name}</strong></span><span role="cell"><strong>Per unit</strong></span><span role="cell">{formatPricingUnit(rule.billingUnit || "SHIPMENT")}</span><strong role="cell">{formatMoney(rule.rate, displayedQuote.currency)}</strong></div>)}
+            ) : <div role="row" key={rule.code}><span role="cell"><strong>{rule.name}</strong></span><span role="cell">Per unit</span><span role="cell">{formatPricingUnit(rule.billingUnit || "SHIPMENT")}</span><strong role="cell">{formatMoney(rule.rate, displayedQuote.currency)}</strong></div>)}
           </div>
           </div>
             </>
@@ -4080,7 +4519,7 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
               }}
             >
               <Trash2 size={16} aria-hidden="true" />
-              Delete carrier rate
+              Delete
             </MenuItem>
           </Menu>
         </>
@@ -4091,7 +4530,7 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
       hideBack={editing}
     >
       <div className="panel-stack quotation-panel-stack">
-        {!isCreating ? <Alert className="rate-scope-alert" severity="info" variant="outlined" icon={<Info size={18} />}>
+        {!isCreating && displayedPlan.status === "accepted" ? <Alert className="rate-scope-alert" severity="info" variant="outlined" icon={<Info size={18} />}>
           Applies to {formatTransportMode(displayedPlan.transportMode)} shipments fulfilled by {displayedPlan.counterparty || "the selected carrier"}.
         </Alert> : null}
         <section className="ledger-section quotation-card quotation-overview-card">
@@ -4183,7 +4622,7 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
           <span className="bol-document-logo">B</span>
           <div>
             <strong>BEST USA</strong>
-            <small>Freight Forwarding &amp; Logistics</small>
+            <small>Freight &amp; Logistics</small>
             <small>Los Angeles, California · +1 310 555 0188</small>
           </div>
         </div>
@@ -4206,7 +4645,7 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
       <div className="bol-party-grid">
         <section>
           <small>SHIP FROM</small>
-          <strong>{origin || "—"} Distribution Center</strong>
+          <strong>{origin ? `${origin} Distribution Center` : EMPTY_VALUE}</strong>
           <span>1250 Commerce Way</span>
           <span>{origin || "California"}</span>
           <span>Contact: Shipping Department · (510) 555-0142</span>
@@ -4237,7 +4676,7 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
           <tr><th>Handling Units</th><th>Packages</th><th>Description of Articles</th><th>NMFC</th><th>Class</th><th>Weight</th></tr>
         </thead>
         <tbody>
-          {bolCargoLines.map((line) => <tr key={line.lineId}><td>{line.handlingUnitCount || 0} {line.handlingUnitType === "Pallet" ? "PLTS" : "H/U"}</td><td>{line.packagePieceCount || 0} {line.packageType === "Carton" ? "CTNS" : "PCS"}</td><td>{line.commodityDescription || "Cargo item"}<br /><small>{line.hazmat ? "Hazardous" : "Non-hazardous"} · {line.stackable ? "Stackable" : "Do not stack"}</small></td><td>{line.nmfc || "—"}</td><td>{line.freightClass || "—"}</td><td>{Number(line.weight?.value || 0).toLocaleString()} {String(line.weight?.unit || "lb").toUpperCase()}</td></tr>)}
+          {bolCargoLines.map((line) => <tr key={line.lineId}><td>{line.handlingUnitCount || 0} {line.handlingUnitType === "Pallet" ? "PLTS" : "H/U"}</td><td>{line.packagePieceCount || 0} {line.packageType === "Carton" ? "CTNS" : "PCS"}</td><td>{line.commodityDescription || "Cargo item"}<br /><small>{line.hazmat ? "Hazardous" : "Non-hazardous"} · {line.stackable ? "Stackable" : "Do not stack"}</small></td><td>{line.nmfc || EMPTY_VALUE}</td><td>{line.freightClass || EMPTY_VALUE}</td><td>{Number(line.weight?.value || 0).toLocaleString()} {String(line.weight?.unit || "lb").toUpperCase()}</td></tr>)}
           <tr className="bol-total-row"><td>{bolCargoTotals.totalHandlingUnits}</td><td>{bolCargoTotals.totalPackagesPieces}</td><td colSpan="3">TOTAL</td><td>{bolCargoTotals.totalWeight.toLocaleString()} LB</td></tr>
         </tbody>
       </table>
@@ -4256,11 +4695,85 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
   );
 }
 
+function HouseTransportDocument({ shipment, fieldValues = {} }) {
+  const ocean = shipment.transportMode === "OCEAN";
+  const outputDocument = getShipmentOutputDocument(shipment, fieldValues);
+  const value = (path, fallback = EMPTY_VALUE) => modeDetailValue(fieldValues, shipment, path, fallback) || fallback;
+  const [routeOrigin = EMPTY_VALUE, routeDestination = EMPTY_VALUE] = (shipment.route || "").split(" → ");
+  const cargoRows = ocean
+    ? (Object.prototype.hasOwnProperty.call(fieldValues, "mode.containers") ? fieldValues["mode.containers"] : shipment.modeDetails?.containers || [])
+    : (Object.prototype.hasOwnProperty.call(fieldValues, "mode.dimensions") ? fieldValues["mode.dimensions"] : shipment.modeDetails?.dimensions || []);
+
+  return (
+    <section className="bol-sheet bol-dialog-sheet" aria-label={`${outputDocument.code} ${outputDocument.number}`}>
+      <header className="bol-document-header">
+        <div className="bol-document-brand">
+          <span className="bol-document-logo">B</span>
+          <div>
+            <strong>BEST USA</strong>
+            <small>Freight &amp; Logistics</small>
+            <small>Los Angeles, California · +1 310 555 0188</small>
+          </div>
+        </div>
+        <div className="bol-document-title">
+          <span>PREVIEW</span>
+          <h2>{outputDocument.label.toUpperCase()}</h2>
+          <dl>
+            <div><dt>{outputDocument.code} NO.</dt><dd>{outputDocument.number}</dd></div>
+            <div><dt>SHIPMENT NO.</dt><dd>{shipment.shipmentNumber || shipment.shipmentId}</dd></div>
+          </dl>
+          <div className="bol-barcode" aria-label={`Barcode for ${outputDocument.number}`} />
+        </div>
+      </header>
+      <div className="bol-reference-row">
+        <div><small>POST DATE</small><strong>{formatDate(value("mode.postDate", shipment.lastUpdated), { withYear: true })}</strong></div>
+        <div><small>CUSTOMER REF.</small><strong>{value("mode.customerReference")}</strong></div>
+        <div><small>SERVICE</small><strong>{formatTransportMode(shipment.transportMode)} · {shipment.serviceType}</strong></div>
+        <div><small>{ocean ? "ROUTE" : "FLIGHT"}</small><strong>{ocean ? `${routeOrigin} → ${routeDestination}` : value("mode.master.flightNo")}</strong></div>
+      </div>
+      <div className="bol-party-grid">
+        <section><small>SHIPPER</small><strong>{value("mode.house.shipper")}</strong><span>{routeOrigin}</span></section>
+        <section><small>CONSIGNEE</small><strong>{value("mode.house.consignee", shipment.customer)}</strong><span>{ocean ? value("mode.house.deliveryLocation", routeDestination) : value("mode.master.destinationAirport", routeDestination)}</span></section>
+        <section><small>NOTIFY PARTY</small><strong>{value("mode.house.notifyParty", shipment.customer)}</strong><span>{value("mode.billTo", shipment.customer)}</span></section>
+        <section><small>{ocean ? "OCEAN CARRIER" : "AIR CARRIER"}</small><strong>{value("mode.master.carrier")}</strong><span>{ocean ? `${value("mode.master.vessel")} · ${value("mode.master.voyage")}` : value("mode.master.mawbNo")}</span></section>
+      </div>
+      <div className="bol-cargo-heading">{ocean ? "CONTAINER & CARGO INFORMATION" : "AIR CARGO INFORMATION"}</div>
+      <table className="bol-cargo-table">
+        <thead>
+          {ocean ? <tr><th>Container No.</th><th>Type / Size</th><th>Seal No.</th><th>Packages</th><th>Weight</th><th>Measurement</th></tr>
+            : <tr><th>Pieces</th><th>Dimensions</th><th>Unit</th><th>Gross Weight</th><th>Chargeable Weight</th><th>Commodity</th></tr>}
+        </thead>
+        <tbody>
+          {cargoRows.length ? cargoRows.map((row, index) => ocean ? (
+            <tr key={`${row.containerNo || "container"}-${index}`}><td>{row.containerNo || EMPTY_VALUE}</td><td>{row.typeSize || EMPTY_VALUE}</td><td>{row.sealNo || EMPTY_VALUE}</td><td>{row.packages || EMPTY_VALUE}</td><td>{row.weight || EMPTY_VALUE}</td><td>{row.measurement || EMPTY_VALUE}</td></tr>
+          ) : (
+            <tr key={`dimension-${index}`}><td>{row.pieces || EMPTY_VALUE}</td><td>{[row.length, row.width, row.height].filter(Boolean).join(" × ") || EMPTY_VALUE}</td><td>{row.unit || "CM"}</td><td>{value("mode.house.grossWeight")}</td><td>{value("mode.house.chargeableWeight")}</td><td>{value("mode.house.commodity")}</td></tr>
+          )) : <tr><td colSpan={6}>No cargo lines available.</td></tr>}
+        </tbody>
+      </table>
+      <div className="bol-special-services">
+        <div><small>MARKS &amp; DESCRIPTION</small><p>{value("mode.house.mark")} · {ocean ? value("mode.house.description") : value("mode.house.commodity")}</p></div>
+        <div><small>{ocean ? "MASTER B/L" : "MASTER AWB"}</small><strong>{ocean ? value("mode.master.mblNo") : value("mode.master.mawbNo")}</strong></div>
+      </div>
+      <p className="bol-legal-copy">Synthetic document preview for workflow validation. Not a final transport document.</p>
+      <div className="bol-signature-grid">
+        <section><span>Issued by</span><strong>BEST USA</strong><small>Date: {formatDate(value("mode.postDate", shipment.lastUpdated), { withYear: true })}</small></section>
+        <section><span>Authorized signature</span><strong>____________________________</strong><small>For internal prototype use</small></section>
+      </div>
+      <footer><span>{outputDocument.number} · Page 1 of 1</span><span>BEST USA · {outputDocument.label}</span></footer>
+    </section>
+  );
+}
+
 function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExport = false, onAutoExportComplete }) {
   const [activeStopId, setActiveStopId] = useState(null);
   const [exportState, setExportState] = useState("idle");
   const documentsRef = useRef(null);
+  const previewContentRef = useRef(null);
+  const isHouseDocument = Boolean(shipment && shipment.transportMode !== "TRUCKING");
+  const outputDocument = getShipmentOutputDocument(shipment, fieldValues);
   const bolStops = useMemo(() => {
+    if (shipment?.transportMode && shipment.transportMode !== "TRUCKING") return [{ stopId: `${shipment.shipmentId}-${outputDocument.code}` }];
     const documents = buildShipmentBolDocuments(shipment, fieldValues);
     if (!stop) return documents;
     const selectedIndex = documents.findIndex((candidate) => candidate.stopId === stop.stopId);
@@ -4271,11 +4784,12 @@ function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExpor
   useEffect(() => {
     setActiveStopId(stop?.stopId || bolStops[0]?.stopId || null);
   }, [shipment?.shipmentId, stop?.stopId, bolStops.length]);
-  const exportBolPdf = async () => {
-    if (!shipment || exportState === "exporting") return;
+  const pdfFilename = shipment
+    ? `${shipment.shipmentId}-${isHouseDocument ? outputDocument.code : bolStops.length > 1 ? `${bolStops.length}-BOLs` : "BOL"}.pdf`
+    : "shipment-document.pdf";
+  const renderBolPdf = async () => {
     const sourceSheets = Array.from(documentsRef.current?.querySelectorAll(".bol-dialog-sheet") || []);
-    if (!sourceSheets.length) return;
-    setExportState("exporting");
+    if (!sourceSheets.length) throw new Error("No document pages are available for PDF rendering.");
     const exportHost = document.createElement("div");
     Object.assign(exportHost.style, {
       position: "fixed",
@@ -4318,14 +4832,29 @@ function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExpor
         const imageHeight = canvas.height * scale;
         pdf.addImage(canvas.toDataURL("image/png"), "PNG", (pageWidth - imageWidth) / 2, margin, imageWidth, imageHeight, undefined, "FAST");
       }
-      pdf.save(`${shipment.shipmentId}-${bolStops.length > 1 ? `${bolStops.length}-BOLs` : "BOL"}.pdf`);
+      return pdf.output("blob");
+    } finally {
+      exportHost.remove();
+    }
+  };
+  const exportBolPdf = async () => {
+    if (!shipment || exportState === "exporting") return;
+    setExportState("exporting");
+    try {
+      const blob = await renderBolPdf();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = pdfFilename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
       setExportState("success");
       onAutoExportComplete?.();
     } catch (error) {
       setExportState("error");
       onAutoExportComplete?.();
-    } finally {
-      exportHost.remove();
     }
   };
   useEffect(() => {
@@ -4338,41 +4867,30 @@ function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExpor
   if (!shipment) return null;
   const activeStop = bolStops.find((candidate) => candidate.stopId === activeStopId) || bolStops[0] || stop;
   const activeStopIndex = Math.max(0, bolStops.findIndex((candidate) => candidate.stopId === activeStop?.stopId));
-  const goToBolPage = (nextIndex) => {
-    const nextStop = bolStops[nextIndex];
-    if (nextStop) setActiveStopId(nextStop.stopId);
+  const syncActiveBolOnScroll = () => {
+    if (isHouseDocument || bolStops.length < 2 || !previewContentRef.current) return;
+    const viewportRect = previewContentRef.current.getBoundingClientRect();
+    const pages = Array.from(documentsRef.current?.querySelectorAll("[data-bol-stop-id]") || []);
+    const mostVisiblePage = pages.reduce((currentBest, page) => {
+      const pageRect = page.getBoundingClientRect();
+      const visibleHeight = Math.max(0, Math.min(pageRect.bottom, viewportRect.bottom) - Math.max(pageRect.top, viewportRect.top));
+      return !currentBest || visibleHeight > currentBest.visibleHeight ? { page, visibleHeight } : currentBest;
+    }, null);
+    const stopId = mostVisiblePage?.page.dataset.bolStopId;
+    if (stopId && stopId !== activeStopId) setActiveStopId(stopId);
   };
   return (
     <Dialog open onClose={onClose} maxWidth="lg" fullWidth aria-labelledby="bol-preview-title" className="bol-preview-dialog">
       <DialogTitle className="bol-preview-dialog-title">
-        <span id="bol-preview-title">Bill Of Lading Preview</span>
-        {bolStops.length > 1 ? (
-          <span className="bol-preview-page-controls" role="navigation" aria-label="Bill of Lading pages">
-            <IconButton
-              size="small"
-              aria-label="Previous BOL"
-              disabled={activeStopIndex === 0}
-              onClick={() => goToBolPage(activeStopIndex - 1)}
-            >
-              <ChevronLeft size={18} aria-hidden="true" />
-            </IconButton>
-            <span className="bol-preview-page-indicator" aria-live="polite">{activeStopIndex + 1} / {bolStops.length}</span>
-            <IconButton
-              size="small"
-              aria-label="Next BOL"
-              disabled={activeStopIndex === bolStops.length - 1}
-              onClick={() => goToBolPage(activeStopIndex + 1)}
-            >
-              <ChevronRight size={18} aria-hidden="true" />
-            </IconButton>
-          </span>
-        ) : null}
+        <span id="bol-preview-title">{isHouseDocument ? `${outputDocument.label} Preview` : "Bill Of Lading Preview"}</span>
+        {!isHouseDocument && bolStops.length > 1 ? <span className="bol-preview-page-indicator" aria-live="polite">{activeStopIndex + 1}/{bolStops.length}</span> : null}
       </DialogTitle>
-      <DialogContent dividers className="bol-dialog-content">
-        <div className="bol-preview-documents" ref={documentsRef}>
+      <DialogContent dividers className="bol-dialog-content" ref={previewContentRef} onScroll={syncActiveBolOnScroll}>
+        <div className="bol-preview-documents is-continuous" ref={documentsRef}>
           {bolStops.map((candidate, pageIndex) => (
-            <div className={candidate.stopId === activeStop?.stopId ? "is-active" : "is-hidden"} key={candidate.stopId}>
-              <BolDocument shipment={shipment} stop={candidate} pageIndex={pageIndex} pageCount={bolStops.length} />
+            <div className="bol-preview-document-page" data-bol-stop-id={candidate.stopId} key={candidate.stopId}>
+              {!isHouseDocument && bolStops.length > 1 ? <div className="bol-preview-document-marker"><span>{pageIndex + 1}/{bolStops.length}</span></div> : null}
+              {isHouseDocument ? <HouseTransportDocument shipment={shipment} fieldValues={fieldValues} /> : <BolDocument shipment={shipment} stop={candidate} pageIndex={pageIndex} pageCount={bolStops.length} />}
             </div>
           ))}
         </div>
@@ -4386,18 +4904,19 @@ function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExpor
           startIcon={exportState === "exporting" ? <CircularProgress size={16} color="inherit" /> : <Download size={17} />}
           onClick={exportBolPdf}
         >
-          {exportState === "exporting" ? "Exporting…" : `Export ${formatBolCount(bolStops.length)}`}
+          {exportState === "exporting" ? "Exporting…" : isHouseDocument ? `Export ${outputDocument.code}` : `Export ${formatBolCount(bolStops.length)}`}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
 
-function ShipmentsTable({ shipments, onOpen, onOpenBol, onDelete, selectedId, selectedIds, onSelectedIdsChange, rowsPerPage, noRowsLabel = "No matching shipments", emptyStateVisual = "search", emptyStateHint }) {
+function ShipmentsTable({ shipments, transportMode = "TRUCKING", onOpen, onOpenBol, onDelete, selectedId, selectedIds, onSelectedIdsChange, rowsPerPage, noRowsLabel = "No matching shipments", emptyStateVisual = "search", emptyStateHint }) {
   const [actionMenu, setActionMenu] = useState({ anchorEl: null, row: null });
   const closeActionMenu = () => setActionMenu({ anchorEl: null, row: null });
+  const outputDocumentCode = transportMode === "OCEAN" ? "HBL" : transportMode === "AIR" ? "HAWB" : "BOL";
   const columns = [
-    { field: "shipmentId", headerName: "Shipment No.", minWidth: 132, flex: .9, renderCell: ({ row }) => <div className="grid-primary-cell"><span>{row.shipmentId}</span></div> },
+    { field: "shipmentNumber", headerName: "Shipment No.", minWidth: 132, flex: .9, renderCell: ({ row }) => <div className="grid-primary-cell"><span>{row.shipmentNumber || row.shipmentId}</span></div> },
     { field: "customer", headerName: "Customer", minWidth: 145, flex: 1.05 },
     { field: "serviceType", headerName: "Service Type", width: 105, renderCell: ({ value }) => <span className="mode-tag">{value}</span> },
     { field: "route", headerName: "Route", minWidth: 270, flex: 1.95, renderCell: ({ value }) => <span className="route-cell">{value}</span> },
@@ -4407,17 +4926,20 @@ function ShipmentsTable({ shipments, onOpen, onOpenBol, onDelete, selectedId, se
       </span>
     ) },
     {
-      field: "bolNumber",
-      headerName: "BOL",
+      field: "outputDocument",
+      headerName: outputDocumentCode,
       width: 64,
       sortable: false,
       align: "center",
       headerAlign: "center",
-      renderCell: ({ row }) => row.transportMode === "TRUCKING" && row.bolNumber ? (
-        <Tooltip title="View BOL">
+      renderCell: ({ row }) => {
+        const document = getShipmentOutputDocument(row);
+        const available = row.transportMode === "TRUCKING" ? Boolean(row.bolNumber) : Boolean(row.outputDocumentGenerated);
+        return available ? (
+        <Tooltip title={`View ${document.code}`}>
           <IconButton
             size="small"
-            aria-label={"View BOL for " + row.shipmentId}
+            aria-label={`View ${document.code} for ${row.shipmentId}`}
             onClick={(event) => {
               event.stopPropagation();
               onOpenBol(row.shipmentId);
@@ -4433,7 +4955,8 @@ function ShipmentsTable({ shipments, onOpen, onOpenBol, onDelete, selectedId, se
             <FileOutput size={17} />
           </IconButton>
         </Tooltip>
-      ) : <span className="table-empty">—</span>,
+      ) : <span className="table-empty">{EMPTY_VALUE}</span>;
+      },
     },
     { field: "lastUpdated", headerName: "Last updated", width: 150, renderCell: ({ value }) => formatDateTime(value) },
     { field: "actions", headerName: "", width: 56, sortable: false, filterable: false, align: "right", renderCell: ({ row }) => <RowActionButton label={row.shipmentId} onClick={(event) => setActionMenu({ anchorEl: event.currentTarget, row })} /> },
@@ -4577,7 +5100,7 @@ function BillingTable({ rows, billingType, onOpen, onOpenShipment, onExportCsv, 
                 <span className="billing-counterparty-task-count">{group.rows.length} {group.rows.length === 1 ? "shipment" : "shipments"}</span>
                 <span className="billing-counterparty-amount">
                   <Chip className={`billing-type-tag ${customerAr ? "is-ar" : "is-ap"}`} label={accountingSideLabel} size="small" />
-                  <strong>{group.hasAmount ? formatMoney(group.amount, group.currency) : "—"}</strong>
+                  <strong>{group.hasAmount ? formatMoney(group.amount, group.currency) : EMPTY_VALUE}</strong>
                 </span>
               </button>
               <Tooltip title="More actions" placement="top">
@@ -4606,8 +5129,8 @@ function BillingTable({ rows, billingType, onOpen, onOpenShipment, onExportCsv, 
                           <td><button className="table-link" type="button" onClick={() => onOpenShipment(row.shipmentId)}>{row.shipmentId}<ArrowUpRight size={13} /></button></td>
                           <td>{formatTransportMode(row.transportMode)}</td>
                           <td><button className="billing-record-link" type="button" onClick={() => onOpen(row)}>{row.billingId}</button></td>
-                          <td>{row.billingDate ? formatDate(row.billingDate) : <span className="table-empty">—</span>}</td>
-                          <td className="is-numeric">{formatMoney(row.amount, row.currency) || <span className="table-empty">—</span>}</td>
+                          <td>{row.billingDate ? formatDate(row.billingDate) : <span className="table-empty">{EMPTY_VALUE}</span>}</td>
+                          <td className="is-numeric">{formatMoney(row.amount, row.currency) || <span className="table-empty">{EMPTY_VALUE}</span>}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -4684,10 +5207,10 @@ function PartnersTable({ rows, entityLabel, onEdit, onDelete, selectedIds, onSel
   const closeActionMenu = () => setActionMenu({ anchorEl: null, row: null });
   const columns = [
     { field: "name", headerName: entityLabel, minWidth: 220, flex: 1.2 },
-    { field: "contactName", headerName: "Primary Contact", minWidth: 150, flex: .9, renderCell: ({ value }) => value || <span className="table-empty">—</span> },
-    { field: "email", headerName: "Email", minWidth: 210, flex: 1, renderCell: ({ value }) => value || <span className="table-empty">—</span> },
-    { field: "mobile", headerName: "Mobile", width: 145, renderCell: ({ value }) => value || <span className="table-empty">—</span> },
-    { field: "phone", headerName: "Phone", width: 145, renderCell: ({ value }) => value || <span className="table-empty">—</span> },
+    { field: "contactName", headerName: "Primary Contact", minWidth: 150, flex: .9, renderCell: ({ value }) => value || <span className="table-empty">{EMPTY_VALUE}</span> },
+    { field: "email", headerName: "Email", minWidth: 210, flex: 1, renderCell: ({ value }) => value || <span className="table-empty">{EMPTY_VALUE}</span> },
+    { field: "mobile", headerName: "Mobile", width: 145, renderCell: ({ value }) => value || <span className="table-empty">{EMPTY_VALUE}</span> },
+    { field: "phone", headerName: "Phone", width: 145, renderCell: ({ value }) => value || <span className="table-empty">{EMPTY_VALUE}</span> },
     { field: "actions", headerName: "", width: 56, sortable: false, filterable: false, align: "right", renderCell: ({ row }) => <RowActionButton label={row.name} onClick={(event) => setActionMenu({ anchorEl: event.currentTarget, row })} /> },
   ];
   return (
@@ -5036,10 +5559,10 @@ function ReportsPreview({ onOpenShipment, chartView, onChartViewChange, chartDim
       flex: 1.4,
       renderCell: ({ value }) => <span className="report-route-cell" title={value}>{value}</span>,
     },
-    { field: "revenue", headerName: "Customer Revenue", width: 140, renderCell: ({ value }) => formatMoney(value) || "—" },
-    { field: "cost", headerName: "Vendor Cost", width: 120, renderCell: ({ value }) => formatMoney(value) || "—" },
-    { field: "profit", headerName: "Profit", width: 100, renderCell: ({ value }) => formatMoney(value) || "—" },
-    { field: "margin", headerName: "Margin", width: 80, renderCell: ({ value }) => value || "—" },
+    { field: "revenue", headerName: "Customer Revenue", width: 140, renderCell: ({ value }) => formatMoney(value) || EMPTY_VALUE },
+    { field: "cost", headerName: "Vendor Cost", width: 120, renderCell: ({ value }) => formatMoney(value) || EMPTY_VALUE },
+    { field: "profit", headerName: "Profit", width: 100, renderCell: ({ value }) => formatMoney(value) || EMPTY_VALUE },
+    { field: "margin", headerName: "Margin", width: 80, renderCell: ({ value }) => value || EMPTY_VALUE },
   ];
   return (
     <div className="report-page">
@@ -5168,7 +5691,7 @@ function BillingExportPanel({ filters, onChange }) {
                     <td>{record.shipmentId}</td>
                     <td>{formatStatus(record.billingType)}</td>
                     <td>{record.counterparty}</td>
-                    <td>{formatMoney(record.amount, record.currency) || "—"}</td>
+                    <td>{formatMoney(record.amount, record.currency) || EMPTY_VALUE}</td>
                   </tr>
                 )) : <tr><td className="billing-preview-empty" colSpan="4">No billing records match these conditions.</td></tr>}
               </tbody>
@@ -5189,6 +5712,8 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [draftSourceFiles, setDraftSourceFiles] = useState([]);
+  const [createdShipments, setCreatedShipments] = useState([]);
+  const [shipmentSourceFilesById, setShipmentSourceFilesById] = useState({});
   const draftSourcePreviewUrlsRef = useRef(new Set());
   useEffect(() => () => {
     draftSourcePreviewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
@@ -5241,6 +5766,7 @@ function App() {
   const [selectedBolStop, setSelectedBolStop] = useState(null);
   const [selectedBolFieldValues, setSelectedBolFieldValues] = useState(null);
   const [autoExportBol, setAutoExportBol] = useState(false);
+  const [generatedOutputDocumentIds, setGeneratedOutputDocumentIds] = useState(() => [...initialGeneratedOutputDocumentIds]);
   const [pendingDeleteShipmentId, setPendingDeleteShipmentId] = useState(null);
   const [pendingBulkDeleteIds, setPendingBulkDeleteIds] = useState([]);
   const [pendingBulkDeleteQuotation, setPendingBulkDeleteQuotation] = useState(null);
@@ -5255,18 +5781,37 @@ function App() {
   const [issueState, setIssueState] = useState(() => Object.fromEntries(demoIssues.map((issue) => [issue.issueId, { status: "unresolved", resolution: null }])));
 
   const unresolvedBlockingIssueCount = demoIssues.filter((issue) => issue.severity === "candidate_blocker" && issueState[issue.issueId].status === "unresolved").length;
-  const shipments = useMemo(() => baseShipments.filter((shipment) => !deletedShipmentIds.includes(shipment.shipmentId)).map((shipment) => {
+  const shipments = useMemo(() => [...baseShipments, ...createdShipments].filter((shipment) => !deletedShipmentIds.includes(shipment.shipmentId)).map((shipment) => {
     const pendingReview = shipmentsPendingReview.includes(shipment.shipmentId);
     const status = pendingReview ? "draft" : committedShipmentIds.includes(shipment.shipmentId) ? "confirmed" : shipment.status;
     const listStatus = shipmentListStatus(status);
+    const savedFields = shipmentFieldValuesById[shipment.shipmentId] || {};
+    const shipmentNumber = String(savedFields["overview.shipmentNumber"] || shipment.shipmentNumber || shipment.shipmentId).trim();
+    const customer = savedFields["overview.customer"] || shipment.customer;
+    const serviceType = savedFields["overview.serviceType"] || shipment.serviceType;
+    const routeOrigin = shipment.transportMode === "OCEAN"
+      ? modeDetailValue(savedFields, shipment, "mode.master.pol")
+      : shipment.transportMode === "AIR"
+        ? modeDetailValue(savedFields, shipment, "mode.master.departureAirport")
+        : "";
+    const routeDestination = shipment.transportMode === "OCEAN"
+      ? modeDetailValue(savedFields, shipment, "mode.master.pod")
+      : shipment.transportMode === "AIR"
+        ? modeDetailValue(savedFields, shipment, "mode.master.destinationAirport")
+        : "";
     return {
       ...shipment,
+      shipmentNumber,
+      customer,
+      serviceType,
+      route: routeOrigin || routeDestination ? `${routeOrigin || "Origin pending"} → ${routeDestination || "Destination pending"}` : shipment.route,
       status,
       listStatus,
+      outputDocumentGenerated: generatedOutputDocumentIds.includes(shipment.shipmentId),
       bolNumber: shipment.transportMode === "TRUCKING" && isConfirmedShipmentStatus(listStatus) ? "BOL-DEMO-" + shipment.shipmentId.split("-").at(-1) : null,
       reviewIssueCount: shipment.shipmentId === fixture.fixtureId ? unresolvedBlockingIssueCount : shipment.reviewIssueCount,
     };
-  }), [committedShipmentIds, shipmentsPendingReview, unresolvedBlockingIssueCount, deletedShipmentIds]);
+  }), [committedShipmentIds, createdShipments, shipmentFieldValuesById, shipmentsPendingReview, unresolvedBlockingIssueCount, deletedShipmentIds, generatedOutputDocumentIds]);
   const isShipmentModule = isShipmentModuleKey(activeModule);
   const isPartnerModule = activeModule === "customers" || activeModule === "carriers";
   const activeTransportMode = isShipmentModule ? shipmentModeByModule[activeModule] : null;
@@ -5301,7 +5846,7 @@ function App() {
     const normalizedQuery = query.toLowerCase().trim();
     if (isShipmentModule) {
       return shipmentDateScopeRows.filter((row) => {
-        const matchesSearch = !normalizedQuery || [row.shipmentId, row.customer, row.route].some((value) => value.toLowerCase().includes(normalizedQuery));
+        const matchesSearch = !normalizedQuery || [row.shipmentNumber, row.shipmentId, row.customer, row.route].some((value) => value.toLowerCase().includes(normalizedQuery));
         const matchesStatus = statusFilter === "all" || row.listStatus === statusFilter;
         return matchesSearch && matchesStatus;
       });
@@ -5355,6 +5900,7 @@ function App() {
   };
   const exportBol = (shipmentId, fieldValues = null) => {
     setAutoExportBol(false);
+    setGeneratedOutputDocumentIds((current) => current.includes(shipmentId) ? current : [...current, shipmentId]);
     setSelectedBolShipmentId(shipmentId);
     setSelectedBolStop(null);
     setSelectedBolFieldValues(fieldValues);
@@ -5363,6 +5909,24 @@ function App() {
     || (panel?.type === "quotation" ? panel.draftRecord : null);
   const selectedCarrierRatePlan = carrierRatePlans.find((plan) => plan.ratePlanId === panel?.id)
     || (panel?.type === "carrier-rate" ? panel.draftRecord : null);
+
+  useEffect(() => {
+    if (partnerDraft) {
+      const partnerModule = partnerDraft.type === "carrier" ? "carriers" : "customers";
+      if (activeModule !== partnerModule) setPartnerDraft(null);
+    }
+
+    if (!panel) return;
+    const panelModule = panel.type === "shipment"
+      ? selectedShipment?.transportMode === "OCEAN"
+        ? "shipments-ocean"
+        : selectedShipment?.transportMode === "AIR"
+          ? "shipments-air"
+          : "shipments-trucking"
+      : "quotations";
+    if (activeModule !== panelModule) setPanel(null);
+  }, [activeModule, panel, partnerDraft, selectedShipment]);
+
   const config = isShipmentModule ? shipmentPageConfig[activeModule] : moduleConfig[activeModule];
   const selectionModuleKey = isShipmentModule ? "shipments" : activeModule === "billing" ? `billing-${billingTypeTab}` : activeModule === "quotations" ? `quotations-${quotationTypeTab}` : activeModule;
   const selectedRowIds = selectedRowsByModule[selectionModuleKey] || [];
@@ -5681,6 +6245,26 @@ function App() {
       },
     }));
   };
+  const resetPricingSide = (shipmentId, pricingSide) => {
+    setManualAdjustmentsByShipment((current) => ({
+      ...current,
+      [shipmentId]: {
+        ...(current[shipmentId] || { customer: [], vendor: [] }),
+        [pricingSide]: [],
+      },
+    }));
+    setPricingLineOverridesByShipment((current) => ({
+      ...current,
+      [shipmentId]: {
+        ...(current[shipmentId] || { customer: {}, vendor: {} }),
+        [pricingSide]: {},
+      },
+    }));
+    setToast({
+      message: `${pricingSide === "customer" ? "Customer Quote" : "Carrier Rate"} applied. Edited ${pricingSide === "customer" ? "Customer Charge" : "Vendor Cost"} items were replaced.`,
+      tone: "success",
+    });
+  };
   const saveQuotation = (updatedQuote, message = "Quote plan updated.", previousQuoteId = updatedQuote.quoteId) => {
     const isNew = !quotations.some((quote) => quote.quoteId === previousQuoteId);
     setQuotations((current) => current.some((quote) => quote.quoteId === previousQuoteId)
@@ -5752,14 +6336,14 @@ function App() {
   const exportBillingCsv = () => {
     setBillingExportAnchorEl(null);
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const headers = ["Shipment", "Transport Mode", "Billing Account", "Source Rate Version", "Counterparty", "Type", "Amount", "Currency", "Due Date"];
+    const headers = ["Counterparty", "Shipment", "Transport Mode", "Billing Account", "Source Rate Version", "Type", "Amount", "Currency", "Due Date"];
     const reportRecords = getBillingReportRecords({ ...billingReportFilters, billingType: billingTypeTab });
     const rows = reportRecords.map((record) => [
+      record.counterparty,
       record.shipmentId,
       formatTransportMode(record.transportMode),
       record.accountId,
       record.sourceRatePlanId,
-      record.counterparty,
       formatStatus(record.billingType),
       record.amount,
       record.currency,
@@ -5772,17 +6356,17 @@ function App() {
     link.download = "best-usa-billing-" + billingReportFilters.dateFrom + "-to-" + billingReportFilters.dateTo + ".csv";
     link.click();
     URL.revokeObjectURL(url);
-    setToast({ message: "CSV billing report exported.", tone: "success" });
+    setToast({ message: "Billing CSV exported.", tone: "success" });
   };
   const exportBillingGroupCsv = (group) => {
     const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const headers = ["Shipment", "Transport Mode", "Record No.", "Billing Date", "Counterparty", "Type", "Amount", "Currency"];
+    const headers = ["Counterparty", "Shipment", "Transport Mode", "Record No.", "Billing Date", "Type", "Amount", "Currency"];
     const rows = group.rows.map((record) => [
+      group.counterparty,
       record.shipmentId,
       formatTransportMode(record.transportMode),
       record.billingId,
       formatDate(record.billingDate),
-      group.counterparty,
       group.billingType === "customer_ar" ? "AR" : "AP",
       record.amount,
       record.currency,
@@ -5798,15 +6382,16 @@ function App() {
     setToast({ message: `${group.counterparty} billing records exported.`, tone: "success" });
   };
   const exportBillingGroupPdf = (group) => {
-    const escapeHtml = (value) => String(value ?? "—").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    const escapeHtml = (value) => String(value ?? EMPTY_VALUE).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     const accountingSide = group.billingType === "customer_ar" ? "AR" : "AP";
     const rows = group.rows.map((record) => `
       <tr>
+        <td>${escapeHtml(group.counterparty)}</td>
         <td>${escapeHtml(record.shipmentId)}</td>
         <td>${escapeHtml(formatTransportMode(record.transportMode))}</td>
         <td>${escapeHtml(record.billingId)}</td>
         <td>${escapeHtml(formatDate(record.billingDate))}</td>
-        <td class="amount">${escapeHtml(formatMoney(record.amount, record.currency) || "—")}</td>
+        <td class="amount">${escapeHtml(formatMoney(record.amount, record.currency) || EMPTY_VALUE)}</td>
       </tr>`).join("");
     const printWindow = window.open("", "_blank", "width=1024,height=720");
     if (!printWindow) {
@@ -5815,7 +6400,7 @@ function App() {
     }
     printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(group.counterparty)} Billing</title><style>
       body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:32px;color:#17242e}h1{font-size:22px;margin:0 0 8px}p{margin:0 0 24px;color:#63717c}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:10px 12px;border-bottom:1px solid #e5e9ec;text-align:left}th{background:#f5f7f9;color:#63717c}.amount{text-align:right}@media print{body{padding:0}}
-    </style></head><body><h1>${escapeHtml(group.counterparty)}</h1><p>${accountingSide} · ${group.rows.length} ${group.rows.length === 1 ? "shipment" : "shipments"}</p><table><thead><tr><th>Shipment</th><th>Transport mode</th><th>Record No.</th><th>Billing date</th><th class="amount">Amount</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    </style></head><body><h1>${escapeHtml(group.counterparty)}</h1><p>${accountingSide} · ${group.rows.length} ${group.rows.length === 1 ? "shipment" : "shipments"}</p><table><thead><tr><th>Counterparty</th><th>Shipment</th><th>Transport mode</th><th>Record No.</th><th>Billing date</th><th class="amount">Amount</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
     printWindow.document.close();
     window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 150);
     setToast({ message: `${group.counterparty} PDF preview opened.`, tone: "success" });
@@ -5823,14 +6408,14 @@ function App() {
   const exportBillingPdf = () => {
     setBillingExportAnchorEl(null);
     const reportRecords = getBillingReportRecords({ ...billingReportFilters, billingType: billingTypeTab });
-    const escapeHtml = (value) => String(value ?? "—").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    const escapeHtml = (value) => String(value ?? EMPTY_VALUE).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     const rows = reportRecords.map((record) => `
       <tr>
+        <td>${escapeHtml(record.counterparty)}</td>
         <td>${escapeHtml(record.shipmentId)}</td>
         <td>${escapeHtml(formatTransportMode(record.transportMode))}</td>
         <td>${escapeHtml(formatStatus(record.billingType))}</td>
-        <td>${escapeHtml(record.counterparty)}</td>
-        <td class="amount">${escapeHtml(formatMoney(record.amount, record.currency) || "—")}</td>
+        <td class="amount">${escapeHtml(formatMoney(record.amount, record.currency) || EMPTY_VALUE)}</td>
       </tr>`).join("");
     const printWindow = window.open("", "_blank", "width=1024,height=720");
     if (!printWindow) {
@@ -5838,9 +6423,9 @@ function App() {
       return;
     }
     printWindow.opener = null;
-    printWindow.document.write(`<!doctype html><html><head><title>BEST USA Billing Report</title><style>
+    printWindow.document.write(`<!doctype html><html><head><title>BEST USA Billing</title><style>
       body{font-family:Arial,sans-serif;margin:40px;color:#17242e}h1{font-size:22px;margin:0 0 6px}p{margin:0 0 24px;color:#63717c;font-size:13px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:10px 12px;border:1px solid #dfe4e8;text-align:left}th{background:#f5f7f9;color:#63717c}.amount{text-align:right}@media print{body{margin:20mm}}
-    </style></head><body><h1>BEST USA Billing Report</h1><p>${escapeHtml(formatDate(billingReportFilters.dateFrom))} – ${escapeHtml(formatDate(billingReportFilters.dateTo))} · ${reportRecords.length} records</p><table><thead><tr><th>Shipment</th><th>Transport mode</th><th>Type</th><th>Counterparty</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
+    </style></head><body><h1>BEST USA Billing</h1><p>${escapeHtml(formatDate(billingReportFilters.dateFrom))} – ${escapeHtml(formatDate(billingReportFilters.dateTo))} · ${reportRecords.length} records</p><table><thead><tr><th>Counterparty</th><th>Shipment</th><th>Transport mode</th><th>Type</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
     printWindow.document.close();
     window.setTimeout(() => { printWindow.focus(); printWindow.print(); }, 150);
     setToast({ message: "PDF preview opened. Choose Save as PDF in the print dialog.", tone: "success" });
@@ -5870,7 +6455,7 @@ function App() {
   const exportReportPdf = () => {
     setReportExportAnchorEl(null);
     const { activeChart, visibleChartData, periodLabel, dimensionLabel } = getReportChartModel(reportChartView, reportChartDimension, reportChartDateRange);
-    const escapeHtml = (value) => String(value ?? "—").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    const escapeHtml = (value) => String(value ?? EMPTY_VALUE).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
     const headers = activeChart.series.map((series) => `<th>${escapeHtml(series.label)}</th>`).join("");
     const rows = visibleChartData.map((entry) => `<tr><td>${escapeHtml(entry.fullLabel)}</td>${activeChart.series.map((series) => `<td class="amount">${escapeHtml(activeChart.unitPrefix + entry[series.key] + activeChart.unitSuffix)}</td>`).join("")}</tr>`).join("");
     const printWindow = window.open("", "_blank", "width=1024,height=720");
@@ -5954,17 +6539,53 @@ function App() {
     || !billingReportFilters.dateTo
     || getBillingReportRecords({ ...billingReportFilters, billingType: billingTypeTab }).length === 0;
   const canCreateShipment = isShipmentModule;
+  const createModeShipment = (transportMode, { sourceShipment = null, sourceFiles = [], startMode = "scratch" } = {}) => {
+    const prefix = transportMode === "OCEAN" ? "OCN-DEMO-" : "AIR-DEMO-";
+    const shipmentId = nextDemoIdentifier(shipments.filter((shipment) => shipment.shipmentId.startsWith(prefix)), "shipmentId", prefix);
+    const today = "2026-09-10";
+    const [sourceOrigin = "", sourceDestination = ""] = (sourceShipment?.route || "").split(" → ");
+    const serviceType = transportMode === "OCEAN" ? "FCL" : "Air Freight";
+    const nextShipment = {
+      shipmentId,
+      customer: sourceShipment?.customer || "",
+      referenceNumber: sourceShipment?.referenceNumber || "",
+      transportMode,
+      serviceType,
+      route: `${sourceOrigin || "Origin pending"} → ${sourceDestination || "Destination pending"}`,
+      createdDate: today,
+      pickupDate: today,
+      status: "draft",
+      reviewIssueCount: 0,
+      lastUpdated: `${today}T09:00:00+08:00`,
+      detailAvailable: true,
+      modeDetails: {
+        postDate: today,
+        operator: "Demo user",
+        customerReference: sourceShipment?.referenceNumber || "",
+        billTo: sourceShipment?.customer || "",
+        master: transportMode === "OCEAN"
+          ? { mblNo: "", overseasAgent: "", carrier: "", blAccount: "BEST USA", pol: sourceOrigin, pod: sourceDestination, vessel: "", voyage: "", etd: "", eta: "", cyCfsLocation: "" }
+          : { mawbNo: "", awbType: "Consolidation", carrier: "", coLoader: "", departureAirport: sourceOrigin, destinationAirport: sourceDestination, etd: "", eta: "", flightNo: "", connectingFlight: "" },
+        house: transportMode === "OCEAN"
+          ? { hblNo: "", amsNo: "", shipper: "", consignee: sourceShipment?.customer || "", notifyParty: sourceShipment?.customer || "", placeOfDelivery: sourceDestination, placeOfDeliveryEta: "", deliveryLocation: "", cyCfsLocation: "", mark: "", description: "" }
+          : { hawbNo: "", shipper: "", consignee: sourceShipment?.customer || "", notifyParty: sourceShipment?.customer || "", incoterms: "", serviceTerm: "", shipType: "General cargo", arrivalDateTime: "", destinationHandlingLocation: "", commodity: "", mark: "", packages: "", grossWeight: "", chargeableWeight: "", volumeWeight: "" },
+        ...(transportMode === "OCEAN" ? { containers: [] } : { dimensions: [] }),
+      },
+    };
+    setCreatedShipments((current) => [...current, nextShipment]);
+    setShipmentFieldValuesById((current) => ({ ...current, [shipmentId]: { __startMode: startMode, "overview.customer": sourceShipment?.customer || "", "overview.serviceType": serviceType } }));
+    if (sourceFiles.length) setShipmentSourceFilesById((current) => ({ ...current, [shipmentId]: sourceFiles }));
+    setCreateDialogOpen(false);
+    setPanel({ type: "shipment", id: shipmentId, startInEdit: true, initialDetailTab: "details" });
+    setToast({ message: `${formatTransportMode(transportMode)} draft created. Complete the shipment details before confirmation.`, tone: "success" });
+  };
   const openCreateShipment = () => {
-    if (activeModule === "shipments-trucking") {
-      setCreateDialogOpen(true);
-      return;
-    }
-    setToast({ message: `${config.title} creation is not included in this demo yet.`, tone: "info" });
+    setCreateDialogOpen(true);
   };
   const shipmentEmptyLabel = activeModule === "shipments-ocean"
-    ? "Ocean operations are outside this Trucking-first demo. This entry preserves the future module boundary."
+    ? "No matching Ocean shipments"
     : activeModule === "shipments-air"
-      ? "Air operations are outside this Trucking-first demo. This entry preserves the future module boundary."
+      ? "No matching Air shipments"
       : "No matching shipments";
   const shipmentEmptyStateVisual = activeModule === "shipments-ocean"
     ? "ocean"
@@ -5972,9 +6593,9 @@ function App() {
       ? "air"
       : "search";
   const shipmentEmptyStateHint = activeModule === "shipments-ocean"
-    ? "No Ocean shipments are available in this demo yet."
+    ? "Create an Ocean shipment or adjust the current filters."
     : activeModule === "shipments-air"
-      ? "No Air shipments are available in this demo yet."
+      ? "Create an Air shipment or adjust the current filters."
       : undefined;
 
   return (
@@ -6028,6 +6649,7 @@ function App() {
           manualAdjustments={manualAdjustmentsByShipment[selectedShipment.shipmentId] || { customer: [], vendor: [] }}
           pricingLineOverrides={pricingLineOverridesByShipment[selectedShipment.shipmentId] || { customer: {}, vendor: {} }}
           onUpdatePricingLine={(pricingSide, lineKey, patch) => updatePricingLineOverride(selectedShipment.shipmentId, pricingSide, lineKey, patch)}
+          onResetPricingSide={(pricingSide) => resetPricingSide(selectedShipment.shipmentId, pricingSide)}
           onRestorePricingLineOverrides={(overrides) => {
             setPricingLineOverridesByShipment((current) => ({ ...current, [selectedShipment.shipmentId]: overrides }));
           }}
@@ -6038,7 +6660,7 @@ function App() {
             setManualAdjustmentsByShipment((current) => ({ ...current, [selectedShipment.shipmentId]: adjustments }));
             setToast({ message: "Unsaved billing adjustments discarded.", tone: "neutral" });
           }}
-          initialSourceFiles={selectedShipment.shipmentId === fixture.fixtureId ? draftSourceFiles : EMPTY_SOURCE_FILES}
+          initialSourceFiles={shipmentSourceFilesById[selectedShipment.shipmentId] || (selectedShipment.shipmentId === fixture.fixtureId ? draftSourceFiles : EMPTY_SOURCE_FILES)}
         />
       ) : panel?.type === "quotation" && selectedQuote ? (
         <QuotationPanel quote={selectedQuote} onSave={saveQuotation} onClose={closeDetail} onDelete={setPendingDeleteQuotationId} initialEditing={Boolean(panel.startInEdit)} isCreating={Boolean(panel.isCreating)} />
@@ -6230,7 +6852,7 @@ function App() {
                     onOpenSearch={openSearchSheet}
                   />}
                   <AppliedFilterBar filters={appliedFilters} onRemove={removeAppliedFilter} onOpenSearch={openSearchSheet} />
-                  {isShipmentModule ? <ShipmentsTable shipments={pagedRows} onOpen={(shipment) => openShipmentById(shipment.shipmentId)} onOpenBol={openBolPreview} onDelete={setPendingDeleteShipmentId} selectedIds={selectedRowIds} onSelectedIdsChange={setSelectedRowIds} rowsPerPage={rowsPerPage} noRowsLabel={shipmentEmptyLabel} emptyStateVisual={shipmentEmptyStateVisual} emptyStateHint={shipmentEmptyStateHint} />
+                  {isShipmentModule ? <ShipmentsTable shipments={pagedRows} transportMode={activeTransportMode} onOpen={(shipment) => openShipmentById(shipment.shipmentId)} onOpenBol={openBolPreview} onDelete={setPendingDeleteShipmentId} selectedIds={selectedRowIds} onSelectedIdsChange={setSelectedRowIds} rowsPerPage={rowsPerPage} noRowsLabel={shipmentEmptyLabel} emptyStateVisual={shipmentEmptyStateVisual} emptyStateHint={shipmentEmptyStateHint} />
                     : isPartnerModule ? <PartnersTable rows={pagedRows} entityLabel={activePartnerType === "carrier" ? "Carrier" : "Customer"} onEdit={openEditPartner} onDelete={setPendingDeletePartnerId} selectedIds={selectedRowIds} onSelectedIdsChange={setSelectedRowIds} rowsPerPage={rowsPerPage} />
                     : activeModule === "quotations" ? quotationTypeTab === "carrier"
                       ? <CarrierRatePlansTable rows={pagedRows} onOpen={(plan) => openCarrierRateById(plan.ratePlanId)} onEdit={(plan) => openCarrierRateById(plan.ratePlanId, { startInEdit: true })} onDuplicate={(plan) => duplicateQuotationRecords("carrier", [plan.ratePlanId])} onDelete={setPendingDeleteCarrierRateId} selectedIds={selectedRowIds} onSelectedIdsChange={setSelectedRowIds} rowsPerPage={rowsPerPage} />
@@ -6284,8 +6906,13 @@ function App() {
       <CreateShipmentDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
+        targetMode={activeTransportMode || "TRUCKING"}
         existingShipments={shipments.filter((shipment) => ["OCEAN", "AIR"].includes(shipment.transportMode)).slice(0, 8)}
         onExtract={(sourceFiles) => {
+          if (activeTransportMode && activeTransportMode !== "TRUCKING") {
+            createModeShipment(activeTransportMode, { sourceFiles, startMode: "documents" });
+            return;
+          }
           setCreateDialogOpen(false);
           setShipmentFieldValuesById((current) => ({ ...current, [fixture.fixtureId]: {} }));
           replaceDraftSourceFiles(sourceFiles);
@@ -6293,12 +6920,20 @@ function App() {
           setToast({ message: "Extraction complete. Review the draft information before submitting.", tone: "success" });
         }}
         onManual={() => {
+          if (activeTransportMode && activeTransportMode !== "TRUCKING") {
+            createModeShipment(activeTransportMode, { startMode: "scratch" });
+            return;
+          }
           setCreateDialogOpen(false);
           setShipmentFieldValuesById((current) => ({ ...current, [fixture.fixtureId]: createEmptyShipmentFieldValues() }));
           replaceDraftSourceFiles([]);
           openShipmentById(fixture.fixtureId, { startInEdit: true });
         }}
         onStartExisting={(sourceShipment) => {
+          if (activeTransportMode && activeTransportMode !== "TRUCKING") {
+            createModeShipment(activeTransportMode, { sourceShipment, startMode: "existing" });
+            return;
+          }
           const sharedRouteStops = fixture.jobDraft.routeStops.map((stop, index) => ({
             ...stop,
             company: index === 1 ? sourceShipment.customer : stop.company,

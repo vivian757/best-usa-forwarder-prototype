@@ -438,8 +438,8 @@
         "effectiveTo": "2026-12-31",
         "shipmentIds": ["TRK-DEMO-001"],
         "rateMatrix": [
-          { "lane": "LTL shipments", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 500 },
-          { "lane": "LTL shipments", "tier": "2,501–5,000 lb", "basis": "Billable weight", "rate": 760 }
+          { "lane": "LTL shipments", "equipmentType": "Van / Dry Van (V)", "tier": "0–2,500 lb", "basis": "Billable weight", "rate": 500 },
+          { "lane": "LTL shipments", "equipmentType": "Van / Dry Van (V)", "tier": "2,501–5,000 lb", "basis": "Billable weight", "rate": 760 }
         ],
         "surchargeRules": [
           { "code": "LIFTGATE", "name": "Liftgate delivery", "trigger": "Per occurrence", "rate": 100, "unit": "flat" },
@@ -461,8 +461,8 @@
         "effectiveTo": "2026-12-31",
         "shipmentIds": ["TRK-DEMO-002"],
         "rateMatrix": [
-          { "lane": "Bay Area → San Diego", "tier": "0–3,000 lb", "basis": "Billable weight", "rate": 1050 },
-          { "lane": "Bay Area → San Diego", "tier": "3,001–6,000 lb", "basis": "Billable weight", "rate": 1440 }
+          { "lane": "Bay Area → San Diego", "equipmentType": "Van / Dry Van (V)", "tier": "0–3,000 lb", "basis": "Billable weight", "rate": 1050 },
+          { "lane": "Bay Area → San Diego", "equipmentType": "Van / Dry Van (V)", "tier": "3,001–6,000 lb", "basis": "Billable weight", "rate": 1440 }
         ],
         "surchargeRules": [
           { "code": "RESIDENTIAL", "name": "Residential delivery", "trigger": "Per delivery", "rate": 140, "unit": "flat" },
@@ -484,7 +484,7 @@
         "effectiveTo": "2027-03-31",
         "shipmentIds": ["TRK-DEMO-003"],
         "rateMatrix": [
-          { "lane": "Long Beach → Phoenix", "tier": "Dry van", "basis": "Per truck", "rate": 2250 }
+          { "lane": "Long Beach → Phoenix", "equipmentType": "Van / Dry Van (V)", "tier": "Base charge", "basis": "Per truck", "rate": 2250 }
         ],
         "surchargeRules": [
           { "code": "HIGH_VALUE", "name": "High-value handling", "trigger": "Per shipment", "rate": 200, "unit": "flat" }
@@ -505,14 +505,60 @@
         "effectiveTo": "2026-12-31",
         "shipmentIds": ["TRK-DEMO-004"],
         "rateMatrix": [
-          { "lane": "Central CA → Nevada", "tier": "0–4 pallets", "basis": "Per shipment", "rate": 700 },
-          { "lane": "Central CA → Nevada", "tier": "5–10 pallets", "basis": "Per shipment", "rate": 850 }
+          { "lane": "Central CA → Nevada", "equipmentType": "Reefer (R)", "tier": "0–4 pallets", "basis": "Per shipment", "rate": 700 },
+          { "lane": "Central CA → Nevada", "equipmentType": "Reefer (R)", "tier": "5–10 pallets", "basis": "Per shipment", "rate": 850 }
         ],
         "surchargeRules": [
           { "code": "COLD_CHAIN", "name": "Refrigerated service", "trigger": "Per shipment", "rate": 15, "unit": "percent" },
           { "code": "DETENTION", "name": "Detention", "trigger": "After 30 free min", "rate": 100, "unit": "per 30 min" }
         ],
         "lastUpdated": "2026-09-05T17:10:00+08:00"
+      },
+      {
+        "quoteId": "RATE-DEMO-005",
+        "customer": "Demo Retail Distribution LLC",
+        "name": "2026 Retail Pacific FCL",
+        "version": 2,
+        "status": "accepted",
+        "currency": "USD",
+        "transportMode": "OCEAN",
+        "serviceScope": "FCL · Asia to US West Coast",
+        "serviceScopes": ["FCL · Asia to US West Coast"],
+        "createdAt": "2025-12-18T09:30:00-08:00",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "shipmentIds": ["OCN-DEMO-001"],
+        "rateMatrix": [
+          { "lane": "Shanghai, CN → Oakland, CA", "equipmentType": "40' High Cube", "tier": "Base charge", "basis": "Per container", "rate": 3200 }
+        ],
+        "surchargeRules": [
+          { "code": "OCEAN_FUEL", "name": "Ocean fuel surcharge", "trigger": "Per container", "rate": 420, "unit": "flat", "billingUnit": "CONTAINER" },
+          { "code": "DOC_FEE", "name": "Documentation fee", "trigger": "Per shipment", "rate": 95, "unit": "flat", "billingUnit": "SHIPMENT" }
+        ],
+        "lastUpdated": "2026-09-04T09:20:00+08:00"
+      },
+      {
+        "quoteId": "RATE-DEMO-006",
+        "customer": "Demo Home Supply Inc.",
+        "name": "2026 Home Supply Air Freight",
+        "version": 1,
+        "status": "accepted",
+        "currency": "USD",
+        "transportMode": "AIR",
+        "serviceScope": "Air Freight · Asia to US West Coast",
+        "serviceScopes": ["Air Freight · Asia to US West Coast"],
+        "createdAt": "2026-01-08T11:00:00+08:00",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "shipmentIds": ["AIR-DEMO-002"],
+        "rateMatrix": [
+          { "lane": "Taipei, TW → San Francisco, CA", "equipmentType": "Pallet", "tier": "500–1,000 KG", "basis": "Chargeable weight", "rate": 2100 }
+        ],
+        "surchargeRules": [
+          { "code": "AIR_FUEL", "name": "Air fuel surcharge", "trigger": "Per shipment", "rate": 310, "unit": "flat", "billingUnit": "SHIPMENT" },
+          { "code": "SECURITY", "name": "Security screening", "trigger": "Per shipment", "rate": 85, "unit": "flat", "billingUnit": "SHIPMENT" }
+        ],
+        "lastUpdated": "2026-09-08T10:40:00+08:00"
       }
     ],
     "pricingResults": {
@@ -524,7 +570,7 @@
         "inputs": [
           { "label": "Actual weight", "value": "2,450 lb" },
           { "label": "Billable weight", "value": "2,500 lb" },
-          { "label": "Applies when", "value": "LTL shipments" }
+          { "label": "Equipment Type", "value": "Van / Dry Van (V)" }
         ],
         "chargeLines": [
           { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–2,500 lb tier", "amount": 500 },
@@ -582,6 +628,40 @@
         "initialAdjustments": [
           { "adjustmentId": "ADJ-DEMO-001", "description": "Detention", "amount": 175, "note": "Driver waited 45 minutes beyond free time.", "addedBy": "Demo Ops User", "addedAt": "2026-09-05T16:40:00-07:00" }
         ]
+      },
+      "OCN-DEMO-001": {
+        "ratePlanId": "RATE-DEMO-005",
+        "calculationStatus": "estimated",
+        "ratedAt": "2026-09-04T09:20:00+08:00",
+        "currency": "USD",
+        "inputs": [
+          { "label": "Container", "value": "1 × 40HC" },
+          { "label": "Billable weight", "value": "18,460 KG" },
+          { "label": "Rate lane", "value": "Shanghai, CN → Oakland, CA" }
+        ],
+        "chargeLines": [
+          { "code": "BASE_FCL", "description": "Base ocean freight", "source": "40HC per-container rate", "unit": "CONTAINER", "amount": 3200 },
+          { "code": "OCEAN_FUEL", "description": "Ocean fuel surcharge", "source": "Per container", "unit": "CONTAINER", "amount": 420 },
+          { "code": "DOC_FEE", "description": "Documentation fee", "source": "Per shipment", "unit": "SHIPMENT", "amount": 95 }
+        ],
+        "initialAdjustments": []
+      },
+      "AIR-DEMO-002": {
+        "ratePlanId": "RATE-DEMO-006",
+        "calculationStatus": "final",
+        "ratedAt": "2026-09-08T10:40:00+08:00",
+        "currency": "USD",
+        "inputs": [
+          { "label": "Actual weight", "value": "486 KG" },
+          { "label": "Billable weight", "value": "962 KG" },
+          { "label": "Rate lane", "value": "Taipei, TW → San Francisco, CA" }
+        ],
+        "chargeLines": [
+          { "code": "BASE_AIR", "description": "Base air freight", "source": "500–1,000 KG tier", "unit": "SHIPMENT", "amount": 2100 },
+          { "code": "AIR_FUEL", "description": "Air fuel surcharge", "source": "Per shipment", "unit": "SHIPMENT", "amount": 310 },
+          { "code": "SECURITY", "description": "Security screening", "source": "Per shipment", "unit": "SHIPMENT", "amount": 85 }
+        ],
+        "initialAdjustments": []
       }
     },
     "billing": [
