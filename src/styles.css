@@ -2632,14 +2632,14 @@ select:focus-visible,
 .version-history-entry small { color: var(--muted); font-size: 12px; line-height: 18px; }
 
 .pricing-section { padding-top: 0; }
-.billing-page-section > .notice { max-width: 1040px; margin: 0 auto 16px; }
+.billing-page-section > .notice { width: 100%; max-width: none; margin: 0 0 16px; }
 .pricing-estimate-alert.MuiAlert-root {
   color: #344054;
   background: #f5f9ff;
   border-color: #bfd3f2;
 }
 .pricing-estimate-alert .MuiAlert-icon { color: var(--blue); }
-.single-page-section > .pricing-section { max-width: 1040px; margin: 0 auto; padding: 0; background: transparent; border: 0; border-radius: 0; }
+.single-page-section > .pricing-section { width: 100%; max-width: none; margin: 0; padding: 0; background: transparent; border: 0; border-radius: 0; }
 .pricing-section-heading { align-items: flex-start; }
 .pricing-section-heading h2 { font-size: 18px; line-height: 26px; }
 .billing-ledger-block { padding: 24px; background: #ffffff; border: 1px solid #e5e9ec; border-radius: 10px; }
