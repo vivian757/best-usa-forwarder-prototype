@@ -18,13 +18,13 @@ try {
   assert.equal(await page.locator("#job-fields-section input").count(), 0, "A regular shipment entry opens in View mode");
   assert.ok(await page.locator("#job-fields-section .field-control-view").count() > 0, "View mode uses readable values instead of disabled inputs");
   assert.equal(await page.getByText("Transport mode", { exact: true }).count(), 0, "Shipment Overview does not repeat the immutable mode already shown in the detail header");
-  assert.equal(await page.getByText("Operation direction", { exact: true }).count(), 0, "Domestic Trucking does not repeat its module-derived direction in View mode");
+  assert.equal(await page.getByText("Direction", { exact: true }).count(), 0, "Domestic Trucking does not repeat its module-derived direction in View mode");
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   await page.getByRole("button", { name: "Save changes", exact: true }).waitFor();
   assert.ok(await page.locator("#job-fields-section input").count() > 0, "Edit enables the Details form");
   assert.equal(await page.getByLabel("Transport mode", { exact: true }).count(), 0, "Transport mode is not a redundant read-only field in Shipment Edit");
-  assert.equal(await page.getByText("Operation direction", { exact: true }).count(), 0, "Domestic Trucking does not expose a redundant direction control in Edit mode");
+  assert.equal(await page.getByText("Direction", { exact: true }).count(), 0, "Domestic Trucking does not expose a redundant direction control in Edit mode");
   await page.getByText("Select an equipment type.", { exact: true }).waitFor();
   const handlingUnitCount = page.getByRole("region", { name: "Stop 1" }).getByLabel("Handling Unit Count", { exact: true });
   assert.equal(await handlingUnitCount.inputValue(), "8", "Extracted handling-unit count remains a normal value");
@@ -46,7 +46,7 @@ try {
   await page.getByRole("button", { name: "Start from scratch", exact: true }).click();
   await page.getByRole("button", { name: "Save changes", exact: true }).waitFor();
   assert.ok(await page.locator("#job-fields-section input").count() > 0, "A newly created draft opens directly in Edit mode");
-  assert.equal(await page.getByText("Operation direction", { exact: true }).count(), 0, "A new Trucking draft inherits DOMESTIC from module context without a manual field");
+  assert.equal(await page.getByText("Direction", { exact: true }).count(), 0, "A new Trucking draft inherits DOMESTIC from module context without a manual field");
 
   console.log("Shipment View/Edit QA passed.");
 } finally {

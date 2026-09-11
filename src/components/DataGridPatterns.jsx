@@ -164,6 +164,7 @@ export function ManagementDataGrid({
         rowHeight={56}
         columnHeaderHeight={48}
         hideFooter
+        disableColumnResize={false}
         disableRowSelectionOnClick
         checkboxSelection={selectionEnabled}
         checkboxSelectionVisibleOnly
@@ -184,7 +185,8 @@ export function ManagementDataGrid({
           border: 0,
           "& .MuiDataGrid-columnHeaders": { backgroundColor: "#F8F9FA" },
           "& .MuiDataGrid-columnHeaderTitle": { color: "text.secondary", fontSize: 13, fontWeight: 700 },
-          "& .MuiDataGrid-columnSeparator": { display: "none" },
+          "& .MuiDataGrid-columnSeparator": { display: "flex", color: "primary.200", opacity: 0, transition: "opacity 150ms ease-out" },
+          "& .MuiDataGrid-columnHeader:hover .MuiDataGrid-columnSeparator, & .MuiDataGrid-columnSeparator.MuiDataGrid-columnSeparator--resizing": { opacity: 1 },
           "& .MuiDataGrid-cell": { display: "flex", alignItems: "center", color: "text.primary", borderBottom: 0, fontSize: 14 },
           "& .MuiDataGrid-row": { cursor: openRow ? "pointer" : "default" },
           "& .MuiDataGrid-row.is-static": { cursor: "default" },

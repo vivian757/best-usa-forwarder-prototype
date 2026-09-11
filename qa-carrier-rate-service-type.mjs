@@ -19,7 +19,7 @@ try {
   await page.locator(".rate-plan-edit-grid input[role='combobox']").first().fill("Pacific Linehaul LLC");
   await page.getByRole("option", { name: "Pacific Linehaul LLC", exact: true }).click();
   await page.getByLabel(/^Rate plan name/).fill("Pacific FTL Demo Alternative");
-  assert.equal(await page.locator(".rate-plan-edit-grid label").filter({ hasText: "Operation Direction" }).count(), 0, "Carrier rate header does not duplicate rule-level applicability");
+  assert.equal(await page.locator(".rate-plan-edit-grid label").filter({ hasText: "Direction" }).count(), 0, "Carrier rate header does not duplicate rule-level applicability");
   assert.equal(await page.locator(".rate-plan-edit-grid label").filter({ hasText: "Load Type" }).count(), 0, "Carrier rate Load Type is configured per pricing rule");
 
   await page.getByRole("button", { name: "Add rule", exact: true }).first().click();

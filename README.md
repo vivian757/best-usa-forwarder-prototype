@@ -20,10 +20,10 @@ Domain validation: `npm run qa:domain`
 - Full-page DetailPage flow inside a collapsible AppShell; no detail Workbook/Drawer
 - Shipment detail is one workspace: expandable Sources, 42-field form, Review, Save draft and Submit
 - Quotations and Billing remain side-menu modules and related records, not linear shipment steps
-- Shipments navigation with Trucking, Ocean and Air views; Ocean and Air lists include representative synthetic records and show Operation Direction
+- Shipments navigation with Trucking, Ocean and Air views; Ocean and Air lists include representative synthetic records and show Direction
 - Shipments management and representative Shipment detail
 - Baseline v0.3 field inventory: all 42 fields on one page with 8 section anchors
-- Transport Mode, Operation Direction, Load Type and Equipment Type shown as separate job attributes; Air cargo does not use Load Type
+- Transport Mode, Direction, Load Type and Equipment Type shown as separate job attributes; Air cargo does not use Load Type
 - Documents, Review Issues, Commit and BOL preview
 - Quotations, Operational Billing and connected reporting preview
 

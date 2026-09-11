@@ -21,17 +21,34 @@ try {
   const panelBeforeDrag = await panel.boundingBox();
   const panelHeading = await panel.locator(".field-source-inspector-heading").boundingBox();
   assert.ok(panelBeforeDrag && panelHeading, "Source panel and draggable heading are visible");
+  assert.ok(
+    panelBeforeDrag.y >= 0 && panelBeforeDrag.y + panelBeforeDrag.height <= 814,
+    "Source panel is capped within the narrow desktop viewport before it is moved",
+  );
+  const previewViewport = panel.locator(".source-document-viewport");
+  const previewBox = await previewViewport.boundingBox();
+  assert.ok(previewBox && previewBox.height >= 240, "Source preview remains usable at the narrow desktop breakpoint");
+  assert.equal(await previewViewport.evaluate((element) => getComputedStyle(element).overflowY), "auto", "Source preview keeps its own vertical scrolling");
+  const previewScrollMetrics = await previewViewport.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  assert.ok(previewScrollMetrics.scrollHeight > previewScrollMetrics.clientHeight, "Long source content is scrollable inside the capped panel");
+  await previewViewport.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  assert.ok(await previewViewport.evaluate((element) => element.scrollTop > 0), "The source preview can be scrolled to content below the fold");
   await page.mouse.move(panelHeading.x + 24, panelHeading.y + panelHeading.height / 2);
   await page.mouse.down();
   await page.mouse.move(panelHeading.x - 96, panelHeading.y + panelHeading.height / 2);
   await page.mouse.up();
   const panelAfterDrag = await panel.boundingBox();
   assert.ok(panelAfterDrag && panelAfterDrag.x <= panelBeforeDrag.x - 110, "Source panel can be repositioned from its heading on a narrow desktop");
-  assert.ok(panelAfterDrag.x >= 0 && panelAfterDrag.y >= 0, "Dragged source panel stays inside the viewport");
-  const previewViewport = panel.locator(".source-document-viewport");
-  const previewBox = await previewViewport.boundingBox();
-  assert.ok(previewBox && previewBox.height >= 240, "Source preview remains usable at the narrow desktop breakpoint");
-  assert.equal(await previewViewport.evaluate((element) => getComputedStyle(element).overflowY), "auto", "Source preview keeps its own vertical scrolling");
+  assert.ok(
+    panelAfterDrag.x >= 0
+      && panelAfterDrag.y >= 0
+      && panelAfterDrag.x + panelAfterDrag.width <= 1087
+      && panelAfterDrag.y + panelAfterDrag.height <= 814,
+    "Dragged source panel stays completely inside the viewport",
+  );
 
   await panel.getByRole("button", { name: "Next source", exact: true }).click();
   await panel.locator(".source-page-count").getByText("2", { exact: true }).waitFor();

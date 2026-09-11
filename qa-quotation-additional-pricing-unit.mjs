@@ -42,14 +42,13 @@ try {
   await scopeAlert.waitFor();
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();
-  assert.equal(await baseTable.locator(".rate-rule-head > [role='columnheader']").count(), 6, "Editing exposes a dedicated action column instead of leaving unexplained Rate space");
-  const baseActionHeader = baseTable.getByRole("columnheader", { name: "Rule actions", exact: true });
+  assert.equal(await baseTable.locator(".rate-rule-head > [role='columnheader']").count(), 5, "Editing keeps the header to its five data columns");
+  assert.equal(await baseTable.getByRole("columnheader", { name: "Rule actions", exact: true }).count(), 0, "Delete is a row action, not a table header icon");
   const baseDeleteButton = page.getByRole("button", { name: "Delete base rule 1", exact: true });
-  const [baseActionHeaderBox, baseDeleteBox] = await Promise.all([baseActionHeader.boundingBox(), baseDeleteButton.boundingBox()]);
-  assert.ok(baseActionHeaderBox && baseDeleteBox && Math.abs((baseActionHeaderBox.x + baseActionHeaderBox.width / 2) - (baseDeleteBox.x + baseDeleteBox.width / 2)) < 2, "The action header aligns with its delete control");
+  assert.equal(await baseDeleteButton.count(), 1, "Delete remains available inside the Rate cell for its rule");
   assert.equal(await page.getByLabel("Base rule 1 fee item", { exact: true }).inputValue(), "Base FTL freight");
   assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Transport mode" }).count(), 1, "quotation scope keeps Transport mode");
-  assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Operation Direction" }).count(), 0, "quotation scope does not duplicate rule-level applicability");
+  assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Direction" }).count(), 0, "quotation scope does not duplicate rule-level applicability");
   assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Load Type" }).count(), 0, "Load Type is configured per pricing rule");
   const equipmentType = page.getByRole("combobox", { name: "Base rule 1 equipment", exact: true });
   assert.equal((await equipmentType.innerText()).trim(), "Van / Dry Van (V)");

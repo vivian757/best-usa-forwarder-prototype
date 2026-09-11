@@ -74,7 +74,6 @@ const generatedManifest = {
     "input/Trucking_Request_TRK-DEMO-001.eml",
     "input/Shipping_Request_TRK-DEMO-001.pdf",
     "input/Cargo_Details_TRK-DEMO-001.xlsx",
-    "input/Pickup_Instructions_TRK-DEMO-001.txt",
     "output/BOL_TRK-DEMO-001.pdf",
     "output/Quotation_RATE-DEMO-001.pdf",
     "README.md"

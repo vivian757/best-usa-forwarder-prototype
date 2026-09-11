@@ -90,13 +90,26 @@ try {
   const sourceById = Object.fromEntries(domain.sourceDocuments.map((source) => [source.sourceDocumentId, source]));
   const trucking = shipmentById["TRK-DEMO-001"];
   assert.deepEqual([trucking.transportMode, trucking.operationDirection, trucking.loadType], ["TRUCKING", "DOMESTIC", "FTL"]);
-  assert.ok(DOMAIN_SCHEMA_V1.required.shipment.includes("operationDirection"), "Operation direction remains required in the Shipment schema even when Trucking derives it from module context");
+  assert.ok(DOMAIN_SCHEMA_V1.required.shipment.includes("operationDirection"), "Direction remains required in the Shipment schema even when Trucking derives it from module context");
+  assert.ok(DOMAIN_SCHEMA_V1.enums.shipmentPartyRole.includes("REQUESTER"), "Requester is an explicit canonical shipment-party role");
   assert.equal(
     domain.shipments.filter((shipment) => shipment.transportMode === "TRUCKING").every((shipment) => shipment.operationDirection === "DOMESTIC"),
     true,
     "Every current Trucking demo Shipment carries the canonical DOMESTIC direction",
   );
   assert.equal(trucking.modeDetails.type, "TRUCKING");
+  const requesterParty = trucking.parties.find((party) => party.role === "REQUESTER");
+  assert.deepEqual(
+    requesterParty?.contactSnapshot,
+    { name: "Jordan Lee", phone: "+1 213-555-0168", email: "jordan.lee@example.com" },
+    "The canonical Shipment preserves the email requester as a separate requester party",
+  );
+  const equipmentEvidence = domain.fieldEvidence.find((item) => item.fieldEvidenceId === "ISSUE-MISSING-001");
+  assert.deepEqual(
+    { fieldPath: equipmentEvidence?.fieldPath, sourceDocumentId: equipmentEvidence?.sourceDocumentId, sourceLocation: equipmentEvidence?.sourceLocation },
+    { fieldPath: "equipmentRequirements[0].equipmentType", sourceDocumentId: "SRC-PDF-001", sourceLocation: "PDF page 1 · Equipment Type" },
+    "Equipment Type evidence stays on the canonical schema path with PDF provenance",
+  );
   assert.equal(trucking.modeDetails.trucking.routeStops.every((stop) => !stop.contact || typeof stop.contact === "object"), true, "Trucking contacts use structured snapshots");
   assert.equal(trucking.modeDetails.trucking.routeStops.every((stop) => !stop.timeWindow || (stop.timeWindow.startAt && stop.timeWindow.endAt && stop.timeWindow.timeZone)), true, "Trucking time windows preserve start, end, and time zone");
   assert.equal(trucking.cargoLines.every((line) => line.routeStopRefs.length === 1), true);
@@ -129,7 +142,7 @@ try {
 
   const air = domain.shipments.find((shipment) => shipment.transportMode === "AIR");
   assert.equal(air.loadType, null);
-  assert.ok(["IMPORT", "EXPORT"].includes(air.operationDirection), "Air carries an explicit canonical operation direction");
+  assert.ok(["IMPORT", "EXPORT"].includes(air.operationDirection), "Air carries an explicit canonical direction");
   assert.equal(
     domain.shipments.filter((shipment) => shipment.transportMode === "OCEAN" || shipment.transportMode === "AIR").every((shipment) => ["IMPORT", "EXPORT"].includes(shipment.operationDirection)),
     true,

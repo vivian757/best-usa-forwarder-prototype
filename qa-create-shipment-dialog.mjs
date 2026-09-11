@@ -5,6 +5,12 @@ import { chromium } from "playwright";
 const url = process.argv[2] || process.env.PROTOTYPE_URL || "http://127.0.0.1:5175/";
 const outputDir = "../../.impeccable/review";
 await fs.mkdir(outputDir, { recursive: true });
+const sourceInputDir = "public/demo-data/TRK-DEMO-001/input";
+const [pdfBuffer, spreadsheetBuffer, emailBuffer] = await Promise.all([
+  fs.readFile(`${sourceInputDir}/Shipping_Request_TRK-DEMO-001.pdf`),
+  fs.readFile(`${sourceInputDir}/Cargo_Details_TRK-DEMO-001.xlsx`),
+  fs.readFile(`${sourceInputDir}/Trucking_Request_TRK-DEMO-001.eml`),
+]);
 
 const browser = await chromium.launch({
   headless: true,
@@ -14,6 +20,7 @@ const browser = await chromium.launch({
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await context.newPage();
+  page.setDefaultTimeout(10_000);
   await page.goto(url, { waitUntil: "networkidle" });
 
   await page.getByRole("button", { name: "Create", exact: true }).click();
@@ -23,13 +30,15 @@ try {
   assert.ok(dialogBox && dialogBox.width >= 760, "Create shipment uses a large desktop dialog");
 
   await dialog.getByLabel("Choose source files").setInputFiles([
-    { name: "Shipping_Request.pdf", mimeType: "application/pdf", buffer: Buffer.from("mock shipping request") },
-    { name: "Cargo_Details.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: Buffer.from("mock cargo details") },
+    { name: "Shipping_Request.pdf", mimeType: "application/pdf", buffer: pdfBuffer },
+    { name: "Cargo_Details.xlsx", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buffer: spreadsheetBuffer },
+    { name: "Trucking_Request.eml", mimeType: "message/rfc822", buffer: emailBuffer },
   ]);
 
   await dialog.getByText("Uploading", { exact: true }).first().waitFor();
   await dialog.getByText("Shipping_Request.pdf", { exact: true }).first().waitFor();
   await dialog.getByText("Cargo_Details.xlsx", { exact: true }).first().waitFor();
+  await dialog.getByText("Trucking_Request.eml", { exact: true }).first().waitFor();
   await dialog.getByText("Uploading", { exact: true }).first().waitFor({ state: "detached" });
 
   const extractButton = dialog.getByRole("button", { name: "Extract", exact: true });
@@ -37,8 +46,11 @@ try {
 
   await dialog.getByRole("button", { name: /Cargo_Details\.xlsx/ }).click();
   await dialog.getByLabel("Preview of Cargo_Details.xlsx").waitFor();
+  await dialog.getByText("Cargo Details TRK-DEMO-001", { exact: true }).waitFor();
+  await dialog.getByRole("button", { name: /Trucking_Request\.eml/ }).click();
+  await dialog.getByText("FTL multi-stop pickup request - PO-DEMO-260914 - Sep 14", { exact: true }).waitFor();
   assert.equal(await dialog.getByText("Local preview", { exact: true }).count(), 0, "Preview heading does not repeat local-file metadata");
-  const addFilesButton = dialog.getByRole("button", { name: "Add files", exact: true });
+  const addFilesButton = dialog.getByRole("button", { name: "Add", exact: true });
   const addFilesColors = await addFilesButton.evaluate((element) => ({
     button: getComputedStyle(element).color,
     icon: getComputedStyle(element.querySelector(".MuiButton-startIcon")).color,
@@ -66,6 +78,7 @@ try {
 
   const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   const mobilePage = await mobileContext.newPage();
+  mobilePage.setDefaultTimeout(10_000);
   await mobilePage.goto(url, { waitUntil: "networkidle" });
   await mobilePage.getByRole("button", { name: "Create", exact: true }).click();
   const mobileDialog = mobilePage.getByRole("dialog", { name: "Create shipment" });
@@ -73,7 +86,7 @@ try {
   await mobileDialog.getByLabel("Choose source files").setInputFiles({
     name: "Shipping_Request.pdf",
     mimeType: "application/pdf",
-    buffer: Buffer.from("mock shipping request"),
+    buffer: pdfBuffer,
   });
   await mobileDialog.getByText("Uploading", { exact: true }).first().waitFor({ state: "detached" });
   const overflow = await mobilePage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

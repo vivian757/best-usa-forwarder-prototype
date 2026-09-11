@@ -16,7 +16,10 @@ try {
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   const contactName = page.getByLabel("Contact name", { exact: true }).first();
   const contactPhone = page.getByLabel("Contact phone", { exact: true }).first();
-  assert.equal(await contactName.inputValue(), "Station Operations");
+  assert.equal(await page.getByLabel("Request contact name", { exact: true }).inputValue(), "Jordan Lee");
+  assert.equal(await page.getByLabel("Request contact phone", { exact: true }).inputValue(), "+1 213-555-0168");
+  assert.equal(await page.getByLabel("Request contact email", { exact: true }).inputValue(), "jordan.lee@example.com");
+  assert.equal(await contactName.inputValue(), "Alex Chen");
   assert.equal(await contactPhone.inputValue(), "+1 925-555-0101");
   assert.equal(await contactPhone.getAttribute("type"), "tel", "Contact phone uses a telephone control");
   const routeDate = page.getByLabel("Time window date", { exact: true }).first();
@@ -24,6 +27,9 @@ try {
   assert.equal(await routeDate.inputValue(), "Sep 14, 2026", "Structured Time window uses an English date label");
   assert.equal(await page.getByLabel("Start time", { exact: true }).first().inputValue(), "9:00 AM");
   assert.equal(await page.getByLabel("End time", { exact: true }).first().inputValue(), "12:00 PM");
+  assert.equal(await page.getByRole("button", { name: "View source for Equipment Type", exact: true }).count(), 0, "A value missing from the source does not expose a source-preview control");
+  assert.equal(await page.getByText("Select an equipment type.", { exact: true }).count(), 1, "Equipment Type keeps its unresolved-field error");
+  assert.equal(await page.getByRole("button", { name: "View source for Customer PO Number", exact: true }).count(), 1, "Fields with a verified source value retain their source-preview control");
   await page.getByRole("button", { name: "Choose time window date", exact: true }).first().click();
   await page.getByText("September 2026", { exact: true }).waitFor();
   await page.getByRole("dialog", { name: "Choose time window date", exact: true }).screenshot({ path: "/private/tmp/best-usa-english-date-picker.png" });

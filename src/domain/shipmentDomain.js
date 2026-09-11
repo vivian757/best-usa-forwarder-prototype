@@ -2,6 +2,7 @@ const TRANSPORT_MODES = ["TRUCKING", "OCEAN", "AIR"];
 const OPERATION_DIRECTIONS = ["DOMESTIC", "IMPORT", "EXPORT"];
 const LOAD_TYPES = ["LTL", "FTL", "FCL", "LCL"];
 const SHIPMENT_STATUSES = ["DRAFT", "CONFIRMED"];
+const SHIPMENT_PARTY_ROLES = ["CUSTOMER", "REQUESTER", "SHIPPER", "CONSIGNEE", "NOTIFY_PARTY", "BILL_TO", "OVERSEAS_AGENT", "FORWARDING_AGENT", "EXECUTING_CARRIER", "CO_LOADER", "CUSTOMS_BROKER", "TRUCKER", "VENDOR"];
 const RATE_PLAN_STATUSES = ["DRAFT", "ACCEPTED", "EXPIRED"];
 const PRICING_SIDES = ["SELL", "BUY"];
 const PRICING_LINE_SOURCES = ["RATE_PLAN", "MANUAL_ADJUSTMENT"];
@@ -15,6 +16,7 @@ export const DOMAIN_SCHEMA_V1 = Object.freeze({
     operationDirection: OPERATION_DIRECTIONS,
     loadType: LOAD_TYPES,
     shipmentStatus: SHIPMENT_STATUSES,
+    shipmentPartyRole: SHIPMENT_PARTY_ROLES,
     ratePlanStatus: RATE_PLAN_STATUSES,
     pricingSide: PRICING_SIDES,
     pricingLineSource: PRICING_LINE_SOURCES,
@@ -55,6 +57,9 @@ export const CANONICAL_FIELD_REGISTRY_V1 = Object.freeze([
   "commercialTerms.serviceLevel",
   "commercialTerms.billToPartyId",
   "parties[]",
+  "parties[].contactSnapshot.name",
+  "parties[].contactSnapshot.phone",
+  "parties[].contactSnapshot.email",
   "equipmentRequirements[].equipmentType",
   "cargoLines[].commodityDescription",
   "cargoLines[].dimensions[]",
@@ -294,6 +299,18 @@ export function adaptLegacyShipment(record = {}, context = {}) {
     : []);
   const cargoLines = asArray(sourceCargo).map(adaptLegacyCargoLine);
   const customerName = record.customerDisplayName || record.customer || "";
+  const requesterContact = normalizeContactSnapshot(jobDraft?.requesterContact);
+  const parties = [
+    customerName ? { shipmentPartyId: `${record.shipmentId}-CUSTOMER`, role: "CUSTOMER", partnerId: record.customerId || null, displayName: customerName, addressSnapshot: null, contactSnapshot: null } : null,
+    requesterContact?.name ? {
+      shipmentPartyId: `${record.shipmentId}-REQUESTER`,
+      role: "REQUESTER",
+      partnerId: record.customerId || null,
+      displayName: jobDraft?.requesterContact?.company || customerName || null,
+      addressSnapshot: null,
+      contactSnapshot: requesterContact,
+    } : null,
+  ].filter(Boolean);
   return {
     shipmentId: record.shipmentId,
     referenceNumbers: [record.referenceNumber ? { type: "OTHER", value: record.referenceNumber, sourceDocumentId: null } : null].filter(Boolean),
@@ -320,7 +337,7 @@ export function adaptLegacyShipment(record = {}, context = {}) {
       serviceLevel: null,
       billToPartyId: record.modeDetails?.billTo || jobDraft?.commercial?.billTo || null,
     },
-    parties: customerName ? [{ shipmentPartyId: `${record.shipmentId}-CUSTOMER`, role: "CUSTOMER", partnerId: record.customerId || null, displayName: customerName, addressSnapshot: null, contactSnapshot: null }] : [],
+    parties,
     equipmentRequirements: asArray(jobDraft?.equipmentRequirements || record.equipmentRequirements).map((item, index) => ({
       equipmentRequirementId: item.equipmentRequirementId || `${record.shipmentId}-EQUIPMENT-${index + 1}`,
       category: item.category || (classification.transportMode === "TRUCKING" ? "VEHICLE" : classification.transportMode === "OCEAN" ? "CONTAINER" : "ULD"),
@@ -593,6 +610,12 @@ export function validateShipment(shipment) {
   }
   if (!rule.operationDirections.includes(shipment.operationDirection)) pushIssue(result, "errors", "INVALID_OPERATION_DIRECTION", "shipment.operationDirection", `${shipment.operationDirection || "null"} is invalid for ${shipment.transportMode}.`);
   if (!rule.loadTypes.includes(shipment.loadType)) pushIssue(result, "errors", "INVALID_LOAD_TYPE", "shipment.loadType", `${shipment.loadType || "null"} is invalid for ${shipment.transportMode}.`);
+  asArray(shipment.parties).forEach((party, index) => {
+    if (!SHIPMENT_PARTY_ROLES.includes(party?.role)) pushIssue(result, "errors", "INVALID_PARTY_ROLE", `shipment.parties[${index}].role`, "Shipment party role is invalid.");
+    if (party?.contactSnapshot !== null && party?.contactSnapshot !== undefined && (typeof party.contactSnapshot !== "object" || Array.isArray(party.contactSnapshot))) {
+      pushIssue(result, "errors", "INVALID_CONTACT_SNAPSHOT", `shipment.parties[${index}].contactSnapshot`, "Party contact must use separate name, phone, and email fields.");
+    }
+  });
   const detailKeys = Object.keys(shipment.modeDetails || {}).filter((key) => key !== "type");
   if (shipment.modeDetails?.type !== shipment.transportMode || detailKeys.length !== 1 || detailKeys[0] !== rule.detailKey) {
     pushIssue(result, "errors", "MODE_DISCRIMINATOR_MISMATCH", "shipment.modeDetails", `Mode details must contain only ${rule.detailKey} for ${shipment.transportMode}.`);
@@ -656,7 +679,7 @@ export function validateRatePlan(ratePlan) {
   const rule = DOMAIN_SCHEMA_V1.modeRules[applicability.transportMode];
   if (!rule) pushIssue(result, "errors", "INVALID_TRANSPORT_MODE", "ratePlan.applicability.transportMode", "Rate Plan transport mode is invalid.");
   else {
-    if (applicability.operationDirection !== null && !rule.operationDirections.includes(applicability.operationDirection)) pushIssue(result, "errors", "INVALID_OPERATION_DIRECTION", "ratePlan.applicability.operationDirection", "Rate Plan operation direction is invalid for its mode.");
+    if (applicability.operationDirection !== null && !rule.operationDirections.includes(applicability.operationDirection)) pushIssue(result, "errors", "INVALID_OPERATION_DIRECTION", "ratePlan.applicability.operationDirection", "Rate Plan direction is invalid for its mode.");
     if (applicability.loadType !== null && !rule.loadTypes.includes(applicability.loadType)) pushIssue(result, "errors", "INVALID_LOAD_TYPE", "ratePlan.applicability.loadType", "Rate Plan load type is invalid for its mode.");
   }
   return result;

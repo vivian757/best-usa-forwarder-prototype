@@ -59,6 +59,9 @@ try {
   assert.match(pdfSourceText, /Pacific Linehaul LLC/, "BOL reads the assigned carrier from the fixture");
   assert.match(pdfSourceText, /COST-DEMO-001/, "BOL reads the carrier rate reference from the fixture");
   assert.match(pdfSourceText, /REF-DEMO-0914/, "BOL reads the shipment reference from the fixture");
+  assert.match(pdfSourceText, /Demo Components West LLC/, "BOL resolves the shipper from the canonical Pickup route stop");
+  assert.match(pdfSourceText, /Alex Chen/, "BOL uses the Pickup contact instead of the Email requester");
+  assert.match(pdfSourceText, /Freight must remain upright\./, "BOL preserves the structured upright handling requirement");
   assert.doesNotMatch(pdfSourceText, /PO-MO-001|BEST USA Contracted Carrier|\$25,000 USD/, "BOL excludes superseded hard-coded values");
   await previewDialog.screenshot({ path: "/tmp/bol-multi-page-preview-initial.png" });
   await nextBolButton.click();

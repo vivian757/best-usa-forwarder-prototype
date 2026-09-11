@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createServer } from "vite";
+import PostalMime from "postal-mime";
 
 const appRoot = resolve(import.meta.dirname);
 const prototypeRoot = resolve(appRoot, "..");
@@ -23,11 +24,31 @@ assert.deepEqual(publishedFixture, fixture, "Published mock source set matches t
 assert.equal(readFileSync(fixturePath, "utf8").includes('"appliesWhen"'), false, "Runtime fixture uses structured conditions instead of appliesWhen");
 assert.equal(readFileSync(fixturePath, "utf8").includes('"templateKey"'), false, "Runtime fixture uses ruleType as the canonical calculation field");
 assert.equal(fixture.jobDraft.routeStops.every((stop) => typeof stop.contact === "object" && "name" in stop.contact && "phone" in stop.contact), true, "Route stop contacts keep name and phone as separate fields");
+assert.deepEqual(
+  (({ name, phone }) => ({ name, phone }))(fixture.jobDraft.routeStops[0].contact),
+  (({ name, phone }) => ({ name, phone }))(fixture.jobDraft.shipper.contact),
+  "The pickup route stop is the same named contact as the legacy BOL fallback",
+);
+assert.equal(fixture.jobDraft.routeStops[0].company, fixture.jobDraft.shipper.company, "The pickup route stop and legacy BOL fallback share one location value");
+const parsedRequesterEmail = await new PostalMime().parse(readFileSync(resolve(appRoot, "public/demo-data/TRK-DEMO-001/input/Trucking_Request_TRK-DEMO-001.eml")));
+assert.deepEqual(
+  { name: parsedRequesterEmail.from?.name, email: parsedRequesterEmail.from?.address },
+  { name: fixture.jobDraft.requesterContact.name, email: fixture.jobDraft.requesterContact.email },
+  "The source EML header matches the independently modeled requester contact",
+);
+assert.match(parsedRequesterEmail.text || "", new RegExp(fixture.jobDraft.requesterContact.phone.replaceAll("+", "\\+")), "The source EML body includes the requester phone number");
+assert.equal(fixture.jobDraft.serviceRequirements.some((item) => item.type === "Upright handling" && item.appliesTo === "shipment"), true, "Email handling instructions remain structured service requirements");
+const equipmentIssue = fixture.reviewIssues.find((issue) => issue.issueId === "ISSUE-MISSING-001");
+assert.deepEqual(
+  { fieldPath: equipmentIssue.fieldPath, sourceIds: equipmentIssue.sourceIds, sourceLocations: equipmentIssue.sourceLocations },
+  { fieldPath: "equipmentRequirements[0].equipmentType", sourceIds: ["SRC-PDF-001"], sourceLocations: ["PDF page 1 · Equipment Type"] },
+  "The missing Equipment Type uses the canonical field path and identifies the PDF source location",
+);
 assert.equal(fixture.jobDraft.routeStops.every((stop) => stop.timeWindow?.startAt && stop.timeWindow?.endAt && stop.timeWindow?.timeZone), true, "Route stop time windows keep structured start, end, and time zone values");
 assert.equal(readFileSync(fixturePath, "utf8").includes('"arrivalDateTime"'), false, "Air arrival is represented once by the master ETA instead of a duplicate House field");
 const transportPreviewRows = fixture.managementDemo.extensionData.transportStagePreviewRows;
 const internationalPreviewRows = transportPreviewRows.filter((row) => ["OCEAN", "AIR"].includes(row.transportMode));
-assert.equal(internationalPreviewRows.every((row) => ["IMPORT", "EXPORT"].includes(row.operationDirection)), true, "Ocean and Air list fixtures carry an explicit operation direction");
+assert.equal(internationalPreviewRows.every((row) => ["IMPORT", "EXPORT"].includes(row.operationDirection)), true, "Ocean and Air list fixtures carry an explicit direction");
 assert.equal(transportPreviewRows.filter((row) => row.transportMode === "AIR").every((row) => !Object.hasOwn(row, "loadType")), true, "Air fixture rows do not introduce a non-canonical Load Type");
 
 const quote = fixture.managementDemo.quotations.find((item) => item.quoteId === "RATE-DEMO-001");

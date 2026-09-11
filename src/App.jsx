@@ -193,7 +193,7 @@ const demoIssueIds = new Set(
 );
 const demoIssues = fixture.reviewIssues.filter((issue) => demoIssueIds.has(issue.issueId));
 const issueFieldLabels = {
-  "equipmentRequirements[0].type": "Equipment Type",
+  "equipmentRequirements[0].equipmentType": "Equipment Type",
   "shipper.timeWindow": "Pickup Time Window",
   instructions: "Remark",
   "cargoLines[0].commodityDescription": "Commodity Description",
@@ -224,6 +224,7 @@ const serviceRequirementOptions = [
   "Notify · consignee",
   "Docs · delivery",
   "Load to Ride · shipment",
+  "Upright handling · shipment",
 ];
 
 const emptyPartnerDraft = { partnerId: null, name: "", type: "customer", contactName: "", email: "", mobile: "", phone: "" };
@@ -232,7 +233,7 @@ const createEmptyShipmentFieldValues = () => ({
   "overview.customer": "",
   "overview.transportMode": "Trucking",
   "overview.loadType": "",
-  "equipmentRequirements[0].type": "",
+  "equipmentRequirements[0].equipmentType": "",
   "identifiers.customerPONumber": "",
   "serviceRequirements[]": [],
   instructions: "",
@@ -724,7 +725,7 @@ function OverviewTab({ shipment, representative, pricingResult, ratePlan, ratePl
           <dl className="definition-grid">
             <div><dt>Customer</dt><dd>{shipment.customer}</dd></div>
             <div><dt>Transport mode</dt><dd>{formatTransportMode(shipment.transportMode)}</dd></div>
-            {shouldShowShipmentOperationDirection(shipment) ? <div><dt>Operation direction</dt><dd>{operationDirectionOptions.find((option) => option.value === getOperationDirection(shipment))?.label || EMPTY_VALUE}</dd></div> : null}
+            {shouldShowShipmentOperationDirection(shipment) ? <div><dt>Direction</dt><dd>{operationDirectionOptions.find((option) => option.value === getOperationDirection(shipment))?.label || EMPTY_VALUE}</dd></div> : null}
             {shipment.transportMode !== "AIR" ? <div><dt>Load type</dt><dd>{getLoadType(shipment) || EMPTY_VALUE}</dd></div> : null}
             <div><dt>Pickup date</dt><dd>{formatDate(shipment.pickupDate, { withYear: true })}</dd></div>
             <div className="span-two"><dt>Route</dt><dd>{shipment.route}</dd></div>
@@ -1187,10 +1188,19 @@ function updateIsoDateTime(value = "", { date, time } = {}) {
 
 function fieldBlockerMessage(issue, field) {
   if (!issue) return "Review this field.";
-  if (field.path === "equipmentRequirements[0].type") return "Select an equipment type.";
+  if (field.path === "equipmentRequirements[0].equipmentType") return "Select an equipment type.";
   if (issue.issueType === "missing") return `${field.label} is required.`;
   if (issue.issueType === "conflict") return `Resolve the conflicting ${field.label.toLowerCase()} values.`;
   return `Review ${field.label.toLowerCase()}.`;
+}
+
+function hasVerifiedSourceEvidence(evidence) {
+  if (!evidence?.sourceIds?.length) return false;
+  if (!Object.prototype.hasOwnProperty.call(evidence, "originalValue")) return true;
+  const value = evidence.originalValue;
+  if (Array.isArray(value)) return value.length > 0;
+  if (value && typeof value === "object") return Object.keys(value).length > 0;
+  return value !== null && value !== undefined && value !== "";
 }
 
 function FieldRecord({ field, value, onChange, editing, issueState, showReviewIssues = true }) {
@@ -1208,8 +1218,8 @@ function FieldRecord({ field, value, onChange, editing, issueState, showReviewIs
     : hasRequiredError
       ? `${field.label} is required.`
       : field.tableCell ? undefined : " ";
-  const sourceEvidence = field.sourceEvidence;
-  const sourceActive = field.sourceActive;
+  const sourceEvidence = hasVerifiedSourceEvidence(field.sourceEvidence) ? field.sourceEvidence : null;
+  const sourceActive = Boolean(sourceEvidence && field.sourceActive);
   const sourceTrigger = sourceEvidence ? (
     <Tooltip title="View source" placement="top" enterDelay={350}>
       <button
@@ -1619,6 +1629,42 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
   const customerOptions = partners.filter((partner) => partner.type === "customer").map((partner) => partner.name);
   const carrierOptions = partners.filter((partner) => partner.type === "carrier").map((partner) => partner.name);
   const sourceEvidenceByPath = representative ? {
+    "requesterContact.name": {
+      sourceIds: ["SRC-EMAIL-001"],
+      sourceLocations: ["Email signature · Requester name"],
+      originalValue: job.requesterContact?.name,
+    },
+    "requesterContact.phone": {
+      sourceIds: ["SRC-EMAIL-001"],
+      sourceLocations: ["Email signature · Requester phone"],
+      originalValue: job.requesterContact?.phone,
+    },
+    "requesterContact.email": {
+      sourceIds: ["SRC-EMAIL-001"],
+      sourceLocations: ["Email header · From"],
+      originalValue: job.requesterContact?.email,
+    },
+    "shipper.company": {
+      sourceIds: ["SRC-EMAIL-001", "SRC-PDF-001"],
+      sourceLocations: ["Email body · Pickup", "PDF page 1 · Shipper"],
+      originalValue: routeStops[0]?.company,
+    },
+    "shipper.address": {
+      sourceIds: ["SRC-PDF-001"],
+      sourceLocations: ["PDF page 1 · Shipper address"],
+      originalValue: routeStops[0]?.address,
+    },
+    "shipper.contact.name": {
+      sourceIds: ["SRC-EMAIL-001"],
+      sourceLocations: ["Email body · Pickup contact"],
+      originalValue: routeStops[0]?.contact?.name,
+    },
+    "shipper.contact.phone": {
+      sourceIds: ["SRC-EMAIL-001"],
+      sourceLocations: ["Email body · Pickup contact"],
+      originalValue: routeStops[0]?.contact?.phone,
+    },
+    "equipmentRequirements[0].equipmentType": reviewIssueByPath["equipmentRequirements[0].equipmentType"],
     "identifiers.customerPONumber": {
       sourceIds: ["SRC-PDF-001"],
       sourceLocations: ["PDF page 1 · Customer PO"],
@@ -1640,7 +1686,7 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
     const timeWindow = normalizeTimeWindow(stop.timeWindow);
     return [
       { label: "Shipping Type", value: stop.activity, stopKey: "activity", routeStopIndex: index, path: stopPath("activity"), control: "radio", options: selectOptions(["Pickup", "Delivery"]), origin: "Route plan / Ops", stage: "Draft / Review", scope: "Core", subgroup },
-      { label: "Company / location", value: stop.company, stopKey: "company", routeStopIndex: index, path: stopPath("company"), sourcePath: sourcePrefix ? `${sourcePrefix}.company` : null, origin: index === 0 ? "Station master / Ops" : "Customer document / Ops", stage: "Draft / Review", scope: "Core", subgroup },
+      { label: "Company / location", value: stop.company, stopKey: "company", routeStopIndex: index, path: stopPath("company"), sourcePath: sourcePrefix ? `${sourcePrefix}.company` : null, origin: "Customer document / Ops", stage: "Draft / Review", scope: "Core", subgroup },
       { label: "Address", value: stop.address, stopKey: "address", routeStopIndex: index, path: stopPath("address"), sourcePath: sourcePrefix ? `${sourcePrefix}.address` : null, fullWidth: true, origin: "Customer document / Ops", stage: "Draft / Review", scope: "Core", subgroup },
       { label: "Contact name", value: contact.name, stopKey: "contact", contactKey: "name", routeStopIndex: index, path: stopPath("contact.name"), sourcePath: sourcePrefix ? `${sourcePrefix}.contact.name` : null, origin: "Customer document / Ops", stage: "Draft / Review", scope: "Conditional", subgroup },
       { label: "Contact phone", value: contact.phone, stopKey: "contact", contactKey: "phone", routeStopIndex: index, path: stopPath("contact.phone"), sourcePath: sourcePrefix ? `${sourcePrefix}.contact.phone` : null, type: "tel", origin: "Customer document / Ops", stage: "Draft / Review", scope: "Conditional", subgroup },
@@ -1660,8 +1706,11 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
       id: "overview", label: "Overview", icon: LayoutList, description: "Core shipment context and identifiers.", fields: [
         { label: "Customer", value: customer, path: "overview.customer", control: "autocomplete", options: customerOptions, origin: "Customer master / Ops", stage: "Draft", scope: "Core" },
         { label: "Shipment No.", value: shipment.shipmentId, path: "overview.shipmentNumber", displayOnly: true, origin: "System", stage: "Draft", scope: "Core" },
+        { label: "Request contact name", value: job.requesterContact?.name || "", path: "requesterContact.name", origin: "Customer email", stage: "Draft", scope: "Conditional" },
+        { label: "Request contact phone", value: job.requesterContact?.phone || "", path: "requesterContact.phone", type: "tel", origin: "Customer email", stage: "Draft", scope: "Conditional" },
+        { label: "Request contact email", value: job.requesterContact?.email || "", path: "requesterContact.email", type: "email", origin: "Customer email", stage: "Draft", scope: "Conditional" },
         { label: "Load type", value: job.overview.serviceType, path: "overview.loadType", control: "select", options: truckingLoadTypeOptions, required: true, origin: "Customer document / Ops", stage: "Draft", scope: "Core" },
-        { label: "Equipment Type", value: equipmentValue, path: "equipmentRequirements[0].type", control: "autocomplete", options: equipmentTypeOptions, freeSolo: true, origin: "Customer document / Ops", stage: "Review", scope: "Core" },
+        { label: "Equipment Type", value: equipmentValue, path: "equipmentRequirements[0].equipmentType", control: "autocomplete", options: equipmentTypeOptions, freeSolo: true, origin: "Customer document / Ops", stage: "Review", scope: "Core" },
         { label: "Customer PO Number", value: job.identifiers.customerPONumber, path: "identifiers.customerPONumber", origin: "Customer document", stage: "Draft", scope: "Conditional" },
       ],
     },
@@ -2112,14 +2161,150 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
   );
 }
 
+function getSourceFileExtension(fileName = "") {
+  return fileName.split(".").at(-1)?.toLowerCase() || "";
+}
+
+function getSourcePreviewUrl(source) {
+  return source?.previewUrl || source?.sourceUrl || null;
+}
+
+async function getSourceArrayBuffer(source, signal) {
+  if (source?.file instanceof Blob) return source.file.arrayBuffer();
+  const sourceUrl = getSourcePreviewUrl(source);
+  if (!sourceUrl) throw new Error("No file is available for preview.");
+  const response = await fetch(sourceUrl, { signal });
+  if (!response.ok) throw new Error(`Unable to read source file (${response.status}).`);
+  return response.arrayBuffer();
+}
+
+function SourcePreviewLoading() {
+  return <div className="source-preview-loading"><CircularProgress size={22} /><span>Reading original file…</span></div>;
+}
+
+function SourcePreviewError({ error }) {
+  return (
+    <div className="source-preview-unavailable">
+      <FileSearch size={24} />
+      <strong>Preview unavailable</strong>
+      <span>{error || "This file could not be read in this browser."}</span>
+    </div>
+  );
+}
+
+function formatEmailAddress(value) {
+  if (!value) return "—";
+  if (Array.isArray(value)) return value.map(formatEmailAddress).join(", ");
+  if (typeof value === "string") return value;
+  return value.name ? `${value.name}${value.address ? ` <${value.address}>` : ""}` : value.address || "—";
+}
+
+function EmailSourceDocumentPreview({ source }) {
+  const [state, setState] = useState({ status: "loading", email: null, error: "" });
+  const sourceInput = source?.file || getSourcePreviewUrl(source);
+
+  useEffect(() => {
+    if (!sourceInput) {
+      setState({ status: "error", email: null, error: "No original email file is available." });
+      return undefined;
+    }
+    const controller = new AbortController();
+    setState({ status: "loading", email: null, error: "" });
+    getSourceArrayBuffer(source, controller.signal)
+      .then(async (buffer) => {
+        const { default: PostalMime } = await import("postal-mime");
+        return new PostalMime().parse(buffer);
+      })
+      .then((email) => {
+        if (!controller.signal.aborted) setState({ status: "ready", email, error: "" });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setState({ status: "error", email: null, error: error.message });
+      });
+    return () => controller.abort();
+  }, [sourceInput]);
+
+  if (state.status === "loading") return <SourcePreviewLoading />;
+  if (state.status === "error") return <SourcePreviewError error={state.error} />;
+  const { email } = state;
+  const headers = [
+    ["From", formatEmailAddress(email.from)],
+    ["To", formatEmailAddress(email.to)],
+    ["Date", email.date ? new Date(email.date).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "—"],
+    ["Subject", email.subject || "(No subject)"],
+  ];
+  return (
+    <div className="source-document-simulation source-document-email is-parsed-source">
+      <div className="source-email-headers">
+        {headers.map(([label, content]) => <div key={label}><span>{label}</span><strong>{content}</strong></div>)}
+      </div>
+      <pre className="source-email-body">{email.text || "(This email does not contain a text body.)"}</pre>
+      {email.attachments?.length ? <div className="source-email-attachments"><strong>Attachments</strong><span>{email.attachments.map((attachment) => attachment.filename || "Unnamed attachment").join(" · ")}</span></div> : null}
+    </div>
+  );
+}
+
+function SpreadsheetSourceDocumentPreview({ source }) {
+  const [state, setState] = useState({ status: "loading", workbook: null, error: "" });
+  const sourceInput = source?.file || getSourcePreviewUrl(source);
+
+  useEffect(() => {
+    if (!sourceInput) {
+      setState({ status: "error", workbook: null, error: "No original spreadsheet file is available." });
+      return undefined;
+    }
+    const controller = new AbortController();
+    setState({ status: "loading", workbook: null, error: "" });
+    getSourceArrayBuffer(source, controller.signal)
+      .then(async (buffer) => {
+        const XLSX = await import("xlsx");
+        const workbook = XLSX.read(buffer, { type: "array", cellText: true, cellDates: true });
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) throw new Error("The spreadsheet has no readable worksheet.");
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: "", raw: false });
+        const populatedRows = rows.filter((row) => row.some((cell) => String(cell).trim()));
+        if (!populatedRows.length) throw new Error("The spreadsheet is empty.");
+        const headerRowIndex = Math.max(0, populatedRows.slice(0, 25).reduce((bestIndex, row, index, allRows) => (
+          row.filter((cell) => String(cell).trim()).length > allRows[bestIndex].filter((cell) => String(cell).trim()).length ? index : bestIndex
+        ), 0));
+        setState({ status: "ready", workbook: {
+          sheetName,
+          title: headerRowIndex > 0 ? populatedRows.slice(0, headerRowIndex).map((row) => row.filter(Boolean).join(" ")).filter(Boolean).join(" · ") : "",
+          headers: populatedRows[headerRowIndex],
+          rows: populatedRows.slice(headerRowIndex + 1, headerRowIndex + 51),
+        }, error: "" });
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) setState({ status: "error", workbook: null, error: error.message });
+      });
+    return () => controller.abort();
+  }, [sourceInput]);
+
+  if (state.status === "loading") return <SourcePreviewLoading />;
+  if (state.status === "error") return <SourcePreviewError error={state.error} />;
+  const { workbook } = state;
+  return (
+    <div className="source-document-simulation source-document-sheet is-parsed-source">
+      <div className="source-sheet-name"><span>{workbook.sheetName}</span>{workbook.title ? <strong>{workbook.title}</strong> : null}</div>
+      <div className="source-sheet-table-scroll">
+        <table className="source-sheet-table">
+          <thead><tr>{workbook.headers.map((header, index) => <th key={`${header}-${index}`} scope="col">{header || " "}</th>)}</tr></thead>
+          <tbody>{workbook.rows.map((row, rowIndex) => <tr key={rowIndex}>{workbook.headers.map((_, cellIndex) => <td key={`${rowIndex}-${cellIndex}`}>{row[cellIndex] || EMPTY_VALUE}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function NativeSourceDocumentPreview({ source }) {
-  if (!source?.previewUrl) return null;
+  const previewUrl = getSourcePreviewUrl(source);
+  if (!previewUrl) return null;
   return (
     <div className={`source-document-native-preview is-${source.previewKind || "file"}`}>
       {source.previewKind === "image" ? (
-        <img src={source.previewUrl} alt={`Source: ${source.fileName}`} />
+        <img src={previewUrl} alt={`Source: ${source.fileName}`} />
       ) : (
-        <object data={source.previewUrl} type="application/pdf" aria-label={`Source: ${source.fileName}`}>
+        <object data={previewUrl} type="application/pdf" aria-label={`Source: ${source.fileName}`}>
           <p>PDF preview is not available in this browser.</p>
         </object>
       )}
@@ -2127,100 +2312,13 @@ function NativeSourceDocumentPreview({ source }) {
   );
 }
 
-function createShipmentSourcePreview(source, shipment) {
-  const [origin = "Origin not available", destination = "Destination not available"] = (shipment.route || "").split(" → ");
-  const customerPo = `PO-${shipment.shipmentId.replace(/^TRK-/, "")}`;
-  const pickupDate = formatDate(shipment.pickupDate, { withYear: true });
-  if (source.documentType === "customer_email") {
-    return {
-      kind: "email",
-      headers: [
-        ["From", `${shipment.customer} <shipping@demo.example>`],
-        ["To", "BEST USA Operations <ops-demo@example.com>"],
-        ["Date", formatDateTime(shipment.lastUpdated)],
-        ["Subject", `${shipment.serviceType} pickup request - ${customerPo}`],
-      ],
-      body: [
-        "Hi Operations,",
-        `Please arrange a ${shipment.serviceType} shipment for ${customerPo}.`,
-        `Pickup is requested on ${pickupDate} from ${origin}. Delivery is required in ${destination}.`,
-        "The shipping request and cargo details are attached for review.",
-        `Thank you,\n${shipment.customer}`,
-      ],
-    };
-  }
-  if (source.documentType === "cargo_details") {
-    return {
-      kind: "spreadsheet",
-      sheetName: "Cargo Details",
-      headers: ["Line ID", "H/U Type", "H/U Count", "Package Type", "Piece Count", "Commodity Description", "Total Weight (lb)", "Dimensions (in)", "Freight Class", "NMFC", "Stackable", "Turnable", "Hazmat"],
-      rows: [["CARGO-001", "Pallet", "8", "Carton", "120", "Consumer electronic accessories", "2450", "48 x 40 x 48", "70", "", "Yes", "Not confirmed", "No"]],
-      summary: ["Total Handling Units: 8 pallets", "Total Packages / Pieces: 120 cartons", "Shipment Total Weight: 2,450 lb", "Turnable requires Operations confirmation."],
-    };
-  }
-  return {
-    kind: "shipping_request",
-    title: "SHIPPING REQUEST",
-    reference: shipment.shipmentId,
-    fields: [
-      ["Customer", shipment.customer],
-      ["Customer PO", customerPo],
-      ["Service", `${shipment.serviceType} · ${formatTransportMode(shipment.transportMode)}`],
-      ["Route", `${origin} → ${destination}`],
-      ["Pickup", pickupDate],
-      ["Cargo", "8 pallets · 120 cartons · 2,450 lb"],
-    ],
-  };
-}
-
 function SourceDocumentEvidencePreview({ source }) {
-  if (source?.previewUrl) return <NativeSourceDocumentPreview source={source} />;
-  if (source?.preview?.kind === "email") {
-    return (
-      <div className="source-document-simulation source-document-email">
-        <div className="source-email-headers">
-          {source.preview.headers.map(([label, content]) => <div key={label}><span>{label}</span><strong>{content}</strong></div>)}
-        </div>
-        <div className="source-email-body">
-          {source.preview.body.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
-        </div>
-      </div>
-    );
-  }
-  if (source?.preview?.kind === "spreadsheet") {
-    return (
-      <div className="source-document-simulation source-document-sheet">
-        <div className="source-sheet-name">{source.preview.sheetName}</div>
-        <div className="source-sheet-table-scroll">
-          <table className="source-sheet-table">
-            <thead><tr>{source.preview.headers.map((header) => <th key={header} scope="col">{header}</th>)}</tr></thead>
-            <tbody>{source.preview.rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={`${rowIndex}-${cellIndex}`}>{cell || EMPTY_VALUE}</td>)}</tr>)}</tbody>
-          </table>
-        </div>
-        <dl className="source-sheet-summary">
-          {source.preview.summary.map((item) => {
-            const [label, ...valueParts] = item.split(":");
-            return <div key={item}><dt>{label}</dt><dd>{valueParts.join(":").trim()}</dd></div>;
-          })}
-        </dl>
-      </div>
-    );
-  }
-  if (source?.preview?.kind === "shipping_request") {
-    return (
-      <div className="source-document-simulation source-document-pdf">
-        <div className="source-pdf-title"><strong>{source.preview.title}</strong><span>{source.preview.reference}</span></div>
-        {source.preview.fields.map(([label, content]) => <div className="source-pdf-row" key={label}><span>{label}</span><strong>{content}</strong></div>)}
-      </div>
-    );
-  }
-  return (
-    <div className="source-preview-unavailable">
-      <FileSearch size={24} />
-      <strong>Preview unavailable</strong>
-      <span>This source has no verified preview content.</span>
-    </div>
-  );
+  const extension = getSourceFileExtension(source?.fileName);
+  if (source?.previewKind === "image" || ["png", "jpg", "jpeg", "gif", "webp"].includes(extension)) return <NativeSourceDocumentPreview source={{ ...source, previewKind: "image" }} />;
+  if (source?.previewKind === "pdf" || extension === "pdf") return <NativeSourceDocumentPreview source={{ ...source, previewKind: "pdf" }} />;
+  if (extension === "eml") return <EmailSourceDocumentPreview source={source} />;
+  if (["xlsx", "xls", "csv"].includes(extension)) return <SpreadsheetSourceDocumentPreview source={source} />;
+  return <SourcePreviewError error="This file type is not supported by the source preview." />;
 }
 
 function SourceDocumentPreviewDialog({ source, shipment, onClose }) {
@@ -2236,9 +2334,9 @@ function SourceDocumentPreviewDialog({ source, shipment, onClose }) {
       <DialogContent className="source-document-preview-content">
         <div className="source-document-viewer" aria-label={`${source.fileName} preview`}>
           <header className="source-document-page-meta">
-            <span>{source.documentType === "cargo_details" ? source.preview?.sheetName || "Sheet 1" : "Page 1"}</span>
+            <span>{source.documentType === "cargo_details" ? "Workbook" : source.documentType === "customer_email" ? "Email" : "Page 1"}</span>
           </header>
-          <div className={`source-document-viewport ${source.previewUrl ? "has-native-source" : ""}`}><SourceDocumentEvidencePreview source={source} /></div>
+          <div className={`source-document-viewport ${source.file || getSourcePreviewUrl(source) ? "has-native-source" : ""}`}><SourceDocumentEvidencePreview source={source} /></div>
         </div>
       </DialogContent>
       <DialogActions className="source-document-preview-actions"><Button variant="outlined" onClick={onClose}>Close</Button></DialogActions>
@@ -2751,7 +2849,7 @@ function ModeShipmentFields({ shipment, fieldValues, onFieldChange, editing, par
   const [activeSection, setActiveSection] = useState("overview");
   const ocean = shipment.transportMode === "OCEAN";
   const extractedFromDocuments = fieldValues.__startMode === "documents";
-  const equipmentType = fieldValues["equipmentRequirements[0].type"] || "";
+  const equipmentType = fieldValues["equipmentRequirements[0].equipmentType"] || "";
   const equipmentTypeMissing = extractedFromDocuments && !equipmentType;
   const operationDirectionValue = modeDetailValue(fieldValues, shipment, "overview.operationDirection", getOperationDirection(shipment));
   const loadTypeValue = modeDetailValue(fieldValues, shipment, "overview.loadType", getLoadType(shipment));
@@ -2765,9 +2863,9 @@ function ModeShipmentFields({ shipment, fieldValues, onFieldChange, editing, par
     { path: "overview.customer", label: "Customer", type: "partner", fallback: shipment.customer },
     { path: "overview.shipmentNumber", label: "Shipment No.", fallback: shipment.shipmentNumber || shipment.shipmentId, placeholder: "Enter shipment no." },
     { path: "mode.customerReference", label: "Customer Ref. / PO" },
-    { path: "overview.operationDirection", label: "Operation Direction", type: "select", options: operationDirectionOptions, fallback: getOperationDirection(shipment), error: editing && !operationDirectionValue, helperText: editing && !operationDirectionValue ? "Select an operation direction." : undefined },
+    { path: "overview.operationDirection", label: "Direction", type: "select", options: operationDirectionOptions, fallback: getOperationDirection(shipment), error: editing && !operationDirectionValue, helperText: editing && !operationDirectionValue ? "Select a direction." : undefined },
     ...(ocean ? [{ path: "overview.loadType", label: "Load Type", type: "select", options: oceanLoadTypeOptions, fallback: getLoadType(shipment), error: editing && !loadTypeValue, helperText: editing && !loadTypeValue ? "Select a load type." : undefined }] : []),
-    { path: "equipmentRequirements[0].type", label: "Equipment Type", type: "select", options: selectOptions(getQuotationEquipmentTypeOptions(shipment.transportMode)), error: equipmentTypeMissing, helperText: equipmentTypeMissing ? "Select an equipment type." : undefined },
+    { path: "equipmentRequirements[0].equipmentType", label: "Equipment Type", type: "select", options: selectOptions(getQuotationEquipmentTypeOptions(shipment.transportMode)), error: equipmentTypeMissing, helperText: equipmentTypeMissing ? "Select an equipment type." : undefined },
   ];
   const masterFields = ocean ? [
     { path: "mode.master.mblNo", label: "MB/L No." },
@@ -2930,6 +3028,7 @@ function ShipmentPanel({
         sourceId: matchingFixtureSource?.sourceId || `CREATED-${index}-${fileName}`,
         fileName,
         documentType,
+        file: sourceRecord.file || null,
         previewKind: sourceRecord.previewKind || null,
         previewUrl: sourceRecord.previewUrl || null,
         size: sourceRecord.size || null,
@@ -2970,25 +3069,14 @@ function ShipmentPanel({
   const createdWithoutSourceDocuments = ["scratch", "existing"].includes(fieldValues.__startMode);
   const representative = shipment.shipmentId === fixture.fixtureId && !createdWithoutSourceDocuments;
   const extractedFromDocuments = representative || fieldValues.__startMode === "documents";
-  const equipmentType = Object.prototype.hasOwnProperty.call(fieldValues, "equipmentRequirements[0].type")
-    ? fieldValues["equipmentRequirements[0].type"]
+  const equipmentType = Object.prototype.hasOwnProperty.call(fieldValues, "equipmentRequirements[0].equipmentType")
+    ? fieldValues["equipmentRequirements[0].equipmentType"]
     : representative
       ? issueState["ISSUE-MISSING-001"]?.value || ""
       : "";
   const shipmentSourceSet = shipment.transportMode !== "TRUCKING" || createdWithoutSourceDocuments
     ? []
-    : representative
-      ? fixture.sourceSet
-      : fixture.sourceSet.map((source, index) => {
-        const { preview, previewKind, previewUrl, sourceUrl, ...sourceWithoutProvidedEvidence } = source;
-        return {
-          ...sourceWithoutProvidedEvidence,
-          sourceId: `${shipment.shipmentId}-SOURCE-${index + 1}`,
-          fileName: source.fileName.replaceAll(fixture.fixtureId, shipment.shipmentId),
-          version: 1,
-          preview: createShipmentSourcePreview(source, shipment),
-        };
-      });
+    : representative ? fixture.sourceSet : [];
   const sourceDocuments = (initialSourceFiles.length ? additionalSources : [...shipmentSourceSet, ...additionalSources]).filter((source) => !removedSourceIds.includes(source.sourceId));
   const addSourceDocuments = (fileList) => {
     const files = Array.from(fileList || []);
@@ -3000,6 +3088,7 @@ function ShipmentPanel({
         sourceId: `ADDITIONAL-${timestamp}-${index}`,
         fileName: file.name,
         documentType: /\.eml$/i.test(file.name) ? "customer_email" : /\.(xlsx?|csv)$/i.test(file.name) ? "cargo_details" : "shipping_request",
+        file,
         version: 1,
         added: true,
         status: "extracting",
@@ -3483,25 +3572,11 @@ function CreateShipmentDialog({ open, onClose, onExtract, onManual, onStartExist
               </div>
             </div>
             <div className="create-upload-preview-pane" aria-label={previewFile ? `Preview of ${previewFile.name}` : "File preview"}>
-              {previewFile?.previewUrl ? (
+              {previewFile ? (
                 <div className={`create-upload-preview-document has-native-preview ${extracting ? "is-extracting" : ""}`}>
                   <div className="create-upload-native-preview">
-                    {previewFile.previewKind === "image" ? (
-                      <img src={previewFile.previewUrl} alt={`Preview of ${previewFile.name}`} />
-                    ) : (
-                      <object data={previewFile.previewUrl} type="application/pdf" aria-label={`Preview of ${previewFile.name}`}>
-                        <p>PDF preview is not available in this browser.</p>
-                      </object>
-                    )}
+                    <SourceDocumentEvidencePreview source={{ fileName: previewFile.name, file: previewFile.file, previewKind: previewFile.previewKind, previewUrl: previewFile.previewUrl }} />
                   </div>
-                  {extracting ? <div className="create-extraction-scan" aria-hidden="true"><span /></div> : null}
-                </div>
-              ) : previewFile ? (
-                <div className={`create-upload-preview-document ${extracting ? "is-extracting" : ""}`}>
-                  <PreviewFileIcon size={34} />
-                  <strong>{previewFile.name}</strong>
-                  <span>{fileTypeLabel(previewFile.documentType)} · {formatFileSize(previewFile.size)}</span>
-                  <p>A visual preview is not available for this file type.</p>
                   {extracting ? <div className="create-extraction-scan" aria-hidden="true"><span /></div> : null}
                 </div>
               ) : null}
@@ -4182,7 +4257,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
           <div className="quotation-rule-group">
           <div className="section-heading"><h2>Base Pricing</h2>{editing ? <div className="section-heading-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addBaseRule}>Add rule</Button></div> : null}</div>
           <div className={`rate-rule-table pricing-rule-table ${editing ? "is-editing" : ""}`} role="table" aria-label="Customer base pricing rules">
-            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Applies to</span><span role="columnheader">Rule Type</span><span role="columnheader">Unit</span><span role="columnheader">Rate</span>{editing ? <span className="rule-action-header" role="columnheader" aria-label="Rule actions"><Trash2 size={15} aria-hidden="true" /></span> : null}</div>
+            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Applies to</span><span role="columnheader">Rule Type</span><span role="columnheader">Unit</span><span role="columnheader">Rate</span></div>
             {displayedQuote.rateMatrix.length === 0 ? (
               <div className="rate-rule-empty" role="row">
                 <span role="cell">{editing ? "No base pricing rules yet. Select Add rule to create one." : "No base pricing rules available."}</span>
@@ -4216,11 +4291,13 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   onChange={(event) => updateRule("rateMatrix", index, "billingUnit", event.target.value)}
                   options={pricingUnitOptions}
                 />
-                <div className="rule-pricing-edit-cell" role="cell">
-                  <TextInput aria-label={`Base rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("rateMatrix", index, "rate", event.target.value)} />
-                  <small>{rulePricingHint(rule)}</small>
+                <div className="rule-rate-action-cell" role="cell">
+                  <div className="rule-pricing-edit-cell">
+                    <TextInput aria-label={`Base rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("rateMatrix", index, "rate", event.target.value)} />
+                    <small>{rulePricingHint(rule)}</small>
+                  </div>
+                  <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete base rule ${index + 1}`} onClick={() => removeBaseRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
                 </div>
-                <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete base rule ${index + 1}`} onClick={() => removeBaseRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
               </div>
             ) : <div role="row" key={rule.ruleId || `${rule.lane}-${rule.tier}`}><span role="cell"><strong>{rule.name}</strong></span><PricingAppliesToCell rule={rule} /><span role="cell">{rule.ruleTypeLabel}</span><span role="cell">{formatPricingUnit(rule.billingUnit)}</span><strong role="cell">{formatRuleRate(rule)}</strong></div>)}
           </div>
@@ -4228,7 +4305,7 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
           <div className="quotation-rule-group">
           <div className="section-heading"><h2>Additional Pricing</h2>{editing ? <div className="section-heading-actions"><Button variant="outlined" size="small" startIcon={<Plus size={15} />} onClick={addDraftRule}>Add rule</Button></div> : null}</div>
           <div className={`rate-rule-table pricing-rule-table ${editing ? "is-editing" : ""}`} role="table" aria-label="Customer additional pricing rules">
-            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Applies to</span><span role="columnheader">Rule Type</span><span role="columnheader">Unit</span><span role="columnheader">Rate</span>{editing ? <span className="rule-action-header" role="columnheader" aria-label="Rule actions"><Trash2 size={15} aria-hidden="true" /></span> : null}</div>
+            <div className="rate-rule-head" role="row"><span role="columnheader">Fee item</span><span role="columnheader">Applies to</span><span role="columnheader">Rule Type</span><span role="columnheader">Unit</span><span role="columnheader">Rate</span></div>
             {displayedQuote.surchargeRules.length === 0 ? (
               <div className="rate-rule-empty" role="row">
                 <span role="cell">{editing ? "No additional pricing rules yet. Select Add rule to create one." : "No additional pricing rules available."}</span>
@@ -4260,11 +4337,13 @@ function QuotationPanel({ quote, onSave, onClose, onDelete, initialEditing = fal
                   onChange={(event) => updateRule("surchargeRules", index, "billingUnit", event.target.value)}
                   options={pricingUnitOptions}
                 />
-                <div className="rule-pricing-edit-cell" role="cell">
-                  <TextInput aria-label={`Additional rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("surchargeRules", index, "rate", event.target.value)} />
-                  <small>{rulePricingHint(rule)}</small>
+                <div className="rule-rate-action-cell" role="cell">
+                  <div className="rule-pricing-edit-cell">
+                    <TextInput aria-label={`Additional rule ${index + 1} ${ruleRateInputLabel(rule).toLowerCase()}`} type="number" inputProps={ruleRateInputProps(rule)} value={rule.rate} onChange={(event) => updateRule("surchargeRules", index, "rate", event.target.value)} />
+                    <small>{rulePricingHint(rule)}</small>
+                  </div>
+                  <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete ${rule.name || `additional rule ${index + 1}`}`} onClick={() => removeDraftRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
                 </div>
-                <Tooltip title="Delete rule" placement="top"><IconButton color="error" className="rule-delete-button" aria-label={`Delete ${rule.name || `additional rule ${index + 1}`}`} onClick={() => removeDraftRule(index)}><Trash2 size={16} /></IconButton></Tooltip>
               </div>
             ) : <div role="row" key={rule.code}><span role="cell"><strong>{rule.name}</strong></span><PricingAppliesToCell rule={rule} /><span role="cell">{rule.ruleTypeLabel}</span><span role="cell">{formatPricingUnit(rule.billingUnit)}</span><strong role="cell">{formatRuleRate(rule)}</strong></div>)}
           </div>
@@ -4667,17 +4746,17 @@ function BolDocument({ shipment, stop, fieldValues = {}, pageIndex = 0, pageCoun
   const billTo = resolvedField("commercial.billTo", representativeJob?.commercial.billTo || "BEST USA billing account");
   const carrierName = resolvedField("carrierAssignment.carrier", representativeJob?.carrierAssignment.carrier || shipment.carrier || "Carrier pending");
   const rateReference = resolvedField("carrierAssignment.quoteReference", representativeJob?.carrierAssignment.quoteReference || EMPTY_VALUE);
-  const shipperCompany = resolvedField("shipper.company", representativeJob?.shipper.company || pickupStop?.company || (origin ? `${origin} Distribution Center` : EMPTY_VALUE));
-  const shipperAddress = resolvedField("shipper.address", representativeJob?.shipper.address || pickupStop?.address || origin || EMPTY_VALUE);
-  const shipperContact = representativeJob?.shipper.contact
-    ? formatContact(representativeJob.shipper.contact)
-    : formatContact(pickupStop?.contact) || "Shipping contact pending";
+  const shipperCompany = pickupStop?.company || representativeJob?.shipper.company || (origin ? `${origin} Distribution Center` : EMPTY_VALUE);
+  const shipperAddress = pickupStop?.address || representativeJob?.shipper.address || origin || EMPTY_VALUE;
+  const shipperContact = formatContact(pickupStop?.contact || representativeJob?.shipper.contact) || "Shipping contact pending";
   const serviceRequirements = representativeJob?.serviceRequirements || [];
   const requiresNotify = serviceRequirements.some((requirement) => requirement.type === "Notify");
   const requiresLiftgate = serviceRequirements.some((requirement) => requirement.type === "Liftgate" && (!requirement.deliveryStopId || requirement.deliveryStopId === stop?.stopId));
+  const requiresUprightHandling = serviceRequirements.some((requirement) => requirement.type === "Upright handling");
   const specialInstructions = [
     requiresNotify ? "Notify consignee before arrival." : null,
     requiresLiftgate ? "Liftgate service required." : null,
+    requiresUprightHandling ? "Freight must remain upright." : null,
     representativeJob?.instructions || null,
   ].filter(Boolean).join(" ") || "No special instructions provided.";
   return (
@@ -5006,10 +5085,10 @@ function ShipmentsTable({ shipments, transportMode = "TRUCKING", onOpen, onOpenB
   const columns = [
     { field: "shipmentNumber", headerName: "Shipment No.", minWidth: 132, flex: .9, renderCell: ({ row }) => <div className="grid-primary-cell"><span>{row.shipmentNumber || row.shipmentId}</span></div> },
     { field: "customer", headerName: "Customer", minWidth: 145, flex: 1.05 },
-    ...(showsOperationDirection ? [{ field: "operationDirection", headerName: "Operation Direction", minWidth: 150, flex: .85, renderCell: ({ row }) => formatOperationDirection(row) || <span className="table-empty">{EMPTY_VALUE}</span> }] : []),
+    ...(showsOperationDirection ? [{ field: "operationDirection", headerName: "Direction", width: 110, renderCell: ({ row }) => formatOperationDirection(row) || <span className="table-empty">{EMPTY_VALUE}</span> }] : []),
     ...(showsLoadType ? [{ field: "loadType", headerName: "Load Type", width: 105, renderCell: ({ value }) => value ? <span className="mode-tag">{value}</span> : <span className="table-empty">{EMPTY_VALUE}</span> }] : []),
     { field: "route", headerName: "Route", minWidth: 270, flex: 1.95, renderCell: ({ value }) => <span className="route-cell">{value}</span> },
-    { field: "listStatus", headerName: "Status", width: 174, minWidth: 166, renderCell: ({ row }) => (
+    { field: "listStatus", headerName: "Status", width: 120, minWidth: 120, renderCell: ({ row }) => (
       <span className="shipment-status-cell">
         <StatusBadge status={row.listStatus} />
       </span>
@@ -6736,7 +6815,7 @@ function App() {
         "overview.customer": sourceShipment?.customer || "",
         "overview.operationDirection": "",
         ...(loadType ? { "overview.loadType": loadType } : {}),
-        "equipmentRequirements[0].type": "",
+        "equipmentRequirements[0].equipmentType": "",
       },
     }));
     if (sourceFiles.length) setShipmentSourceFilesById((current) => ({ ...current, [shipmentId]: sourceFiles }));
@@ -7100,7 +7179,7 @@ function App() {
             return;
           }
           setCreateDialogOpen(false);
-          setShipmentFieldValuesById((current) => ({ ...current, [fixture.fixtureId]: { __startMode: "documents", "equipmentRequirements[0].type": "" } }));
+          setShipmentFieldValuesById((current) => ({ ...current, [fixture.fixtureId]: { __startMode: "documents", "equipmentRequirements[0].equipmentType": "" } }));
           setIssueState((current) => ({ ...current, "ISSUE-MISSING-001": { status: "unresolved", resolution: null } }));
           replaceDraftSourceFiles(sourceFiles);
           openShipmentById(fixture.fixtureId, { startInEdit: true });
