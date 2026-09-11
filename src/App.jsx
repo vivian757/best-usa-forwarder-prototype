@@ -2696,7 +2696,7 @@ function parseModeDateInputValue(value = "", type = "date") {
   return match ? `${match[3]}-${match[1]}-${match[2]}T${match[4]}:${match[5]}` : normalizedValue;
 }
 
-function ModeField({ label, value, editing, onChange, type = "text", options, helperText, placeholder = EMPTY_VALUE, partnerOptions, displayOnly = false }) {
+function ModeField({ label, value, editing, onChange, type = "text", options, error = false, helperText, placeholder = EMPTY_VALUE, partnerOptions, displayOnly = false }) {
   if (!editing || displayOnly) {
     return (
       <div className="mode-field-readonly">
@@ -2706,8 +2706,8 @@ function ModeField({ label, value, editing, onChange, type = "text", options, he
       </div>
     );
   }
-  if (type === "select") return <SelectInput label={label} value={value || ""} options={options || []} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} helperText={helperText} />;
-  if (type === "partner") return <AutocompleteInput label={label} value={value || ""} options={partnerOptions || []} onChange={(nextValue) => onChange(nextValue || "")} freeSolo placeholder={placeholder} helperText={helperText} />;
+  if (type === "select") return <SelectInput label={label} value={value || ""} options={options || []} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} error={error} helperText={helperText} />;
+  if (type === "partner") return <AutocompleteInput label={label} value={value || ""} options={partnerOptions || []} onChange={(nextValue) => onChange(nextValue || "")} freeSolo placeholder={placeholder} error={error} helperText={helperText} />;
   if (type === "date" || type === "datetime-local") {
     const datePlaceholder = type === "date" ? "MM/DD/YYYY" : "MM/DD/YYYY HH:MM";
     return (
@@ -2718,11 +2718,12 @@ function ModeField({ label, value, editing, onChange, type = "text", options, he
         inputProps={{ lang: "en-US", inputMode: "numeric", autoComplete: "off" }}
         onChange={(event) => onChange(parseModeDateInputValue(event.target.value, type))}
         placeholder={datePlaceholder}
+        error={error}
         helperText={helperText}
       />
     );
   }
-  return <TextInput label={label} value={value || ""} type={type} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} helperText={helperText} />;
+  return <TextInput label={label} value={value || ""} type={type} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} error={error} helperText={helperText} />;
 }
 
 function ModeSection({ id, title, icon: SectionIcon, fields, editing, fieldValues, shipment, onFieldChange, partnerOptions }) {
@@ -2819,6 +2820,9 @@ function AirDimensionTable({ shipment, fieldValues, editing, onFieldChange }) {
 function ModeShipmentFields({ shipment, fieldValues, onFieldChange, editing, partners }) {
   const [activeSection, setActiveSection] = useState("overview");
   const ocean = shipment.transportMode === "OCEAN";
+  const extractedFromDocuments = fieldValues.__startMode === "documents";
+  const equipmentType = fieldValues["equipmentRequirements[0].type"] || "";
+  const equipmentTypeMissing = extractedFromDocuments && !equipmentType;
   const partnerOptions = partners.filter((partner) => partner.type === "customer").map((partner) => partner.name);
   const sections = ocean ? [
     ["overview", "Overview", LayoutList], ["master", "Master transport", Ship], ["house", "House shipment", FileText], ["cargo", "Container & cargo", Package],
@@ -2830,6 +2834,7 @@ function ModeShipmentFields({ shipment, fieldValues, onFieldChange, editing, par
     { path: "overview.shipmentNumber", label: "Shipment No.", fallback: shipment.shipmentNumber || shipment.shipmentId, placeholder: "Enter shipment no." },
     { path: "mode.customerReference", label: "Customer Ref. / PO" },
     { path: "overview.serviceType", label: "Service Type", type: "select", options: ocean ? oceanServiceTypeOptions : selectOptions(["Air Freight"]), fallback: shipment.serviceType },
+    { path: "equipmentRequirements[0].type", label: "Equipment Type", type: "select", options: selectOptions(getQuotationEquipmentTypeOptions(shipment.transportMode)), error: equipmentTypeMissing, helperText: equipmentTypeMissing ? "Select an equipment type." : undefined },
     { path: "mode.billTo", label: "Bill To", type: "partner" },
   ];
   const masterFields = ocean ? [
@@ -2897,6 +2902,7 @@ function ModeShipmentFields({ shipment, fieldValues, onFieldChange, editing, par
             <button key={id} type="button" className={activeSection === id ? "active" : ""} aria-current={activeSection === id ? "location" : undefined} onClick={() => scrollToSection(id)}>
               <SectionIcon size={16} />
               <span className="field-index-copy"><strong>{label}</strong></span>
+              {id === "overview" && equipmentTypeMissing ? <span className="anchor-issue-count is-blocker" aria-label="1 unresolved blocker">1</span> : null}
             </button>
           ))}
         </nav>
@@ -3028,11 +3034,12 @@ function ShipmentPanel({
   }, [additionalSources]);
   const createdWithoutSourceDocuments = ["scratch", "existing"].includes(fieldValues.__startMode);
   const representative = shipment.shipmentId === fixture.fixtureId && !createdWithoutSourceDocuments;
+  const extractedFromDocuments = representative || fieldValues.__startMode === "documents";
   const equipmentType = Object.prototype.hasOwnProperty.call(fieldValues, "equipmentRequirements[0].type")
     ? fieldValues["equipmentRequirements[0].type"]
     : representative
       ? issueState["ISSUE-MISSING-001"]?.value || ""
-      : "Dry Van";
+      : "";
   const shipmentSourceSet = shipment.transportMode !== "TRUCKING" || createdWithoutSourceDocuments
     ? []
     : representative
@@ -3122,7 +3129,7 @@ function ShipmentPanel({
   const appliedPricingResult = applyVendorRatePlan(applyQuotationPlan(pricingResult, relatedQuote), relatedVendorRatePlan);
   const blockerCount = representative
     ? demoIssues.filter((issue) => issue.severity === "candidate_blocker" && issueState[issue.issueId].status === "unresolved").length
-    : 0;
+    : extractedFromDocuments && !equipmentType ? 1 : 0;
   const job = fixture.jobDraft;
   const beginEditing = () => {
     editBaselineRef.current = { fieldValues, issueState };
@@ -5904,7 +5911,6 @@ function App() {
     setPendingDeleteShipmentId(null);
     setPendingBulkDeleteIds([]);
     setPendingBulkDeleteQuotation(null);
-    setPendingBulkDeleteBillingIds([]);
     setPendingDeleteQuotationId(null);
     setPendingDeleteCarrierRateId(null);
     setPartnerDraft(null);
@@ -6519,7 +6525,7 @@ function App() {
       },
     };
     setCreatedShipments((current) => [...current, nextShipment]);
-    setShipmentFieldValuesById((current) => ({ ...current, [shipmentId]: { __startMode: startMode, "overview.customer": sourceShipment?.customer || "", "overview.serviceType": serviceType } }));
+    setShipmentFieldValuesById((current) => ({ ...current, [shipmentId]: { __startMode: startMode, "overview.customer": sourceShipment?.customer || "", "overview.serviceType": serviceType, "equipmentRequirements[0].type": "" } }));
     if (sourceFiles.length) setShipmentSourceFilesById((current) => ({ ...current, [shipmentId]: sourceFiles }));
     setCreateDialogOpen(false);
     setPanel({ type: "shipment", id: shipmentId, startInEdit: true, initialDetailTab: "details" });
@@ -6860,7 +6866,8 @@ function App() {
             return;
           }
           setCreateDialogOpen(false);
-          setShipmentFieldValuesById((current) => ({ ...current, [fixture.fixtureId]: {} }));
+          setShipmentFieldValuesById((current) => ({ ...current, [fixture.fixtureId]: { __startMode: "documents", "equipmentRequirements[0].type": "" } }));
+          setIssueState((current) => ({ ...current, "ISSUE-MISSING-001": { status: "unresolved", resolution: null } }));
           replaceDraftSourceFiles(sourceFiles);
           openShipmentById(fixture.fixtureId, { startInEdit: true });
           setToast({ message: "Extraction complete. Review the draft information before submitting.", tone: "success" });
