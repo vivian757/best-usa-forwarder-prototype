@@ -143,7 +143,6 @@ const demoIssues = fixture.reviewIssues.filter((issue) => demoIssueIds.has(issue
 const issueFieldLabels = {
   "equipmentRequirements[0].type": "Equipment Type",
   "shipper.timeWindow": "Pickup Time Window",
-  "cargoLines[0].handlingUnitCount": "Handling Unit Count",
   instructions: "Remark",
   "cargoLines[0].commodityDescription": "Commodity Description",
 };
@@ -1257,7 +1256,6 @@ function joinTimeRangeValue(start, end, timeZone = "") {
 function fieldBlockerMessage(issue, field) {
   if (!issue) return "Review this field.";
   if (field.path === "equipmentRequirements[0].type") return "Select an equipment type.";
-  if (field.path === "cargoLines[0].handlingUnitCount") return "Resolve the conflicting pallet counts.";
   if (issue.issueType === "missing") return `${field.label} is required.`;
   if (issue.issueType === "conflict") return `Resolve the conflicting ${field.label.toLowerCase()} values.`;
   return `Review ${field.label.toLowerCase()}.`;
@@ -1602,9 +1600,7 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
     },
   };
   const equipmentIssue = representative ? issueState["ISSUE-MISSING-001"] : null;
-  const palletIssue = representative ? issueState["ISSUE-CONFLICT-001"] : null;
   const equipmentValue = equipmentIssue?.value || (representative ? null : "Dry Van");
-  const palletValue = palletIssue?.value || (representative ? null : job.cargoLines[0].handlingUnitCount);
   const freightTerms = representative ? job.commercial.freightTerms : "Prepaid";
   const freightBillTo = representative ? job.commercial.billTo : `${shipment.customer} billing account`;
   const contactValue = (contact) => `${contact.name} · ${contact.phone} · ${contact.email}`;
@@ -1647,9 +1643,7 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
   const cargoLineFields = cargoLines.flatMap((line, index) => {
     const dimensions = line.dimensions || {};
     const isOriginalLine = line.lineId === originalCargoLineId;
-    const handlingUnitCount = isOriginalLine && representative
-      ? palletValue ?? line.handlingUnitCount ?? ""
-      : line.handlingUnitCount ?? "";
+    const handlingUnitCount = line.handlingUnitCount ?? "";
     return [
       { label: "Delivery stop", value: line.deliveryStopId || deliveryStopOptions[0]?.value || "", cargoKey: "deliveryStopId", cargoLineIndex: index, path: cargoFieldPath(line, index, "deliveryStopId"), control: "select", options: deliveryStopOptions, origin: "Route plan / Ops", stage: "Draft / Review", scope: "Core", subgroup: `Cargo item ${index + 1}` },
       { label: "Handling Unit Type", value: line.handlingUnitType, cargoKey: "handlingUnitType", cargoLineIndex: index, path: cargoFieldPath(line, index, "handlingUnitType"), origin: "Customer document", stage: "Draft / Review", scope: "Core", subgroup: `Cargo item ${index + 1}` },
@@ -1675,7 +1669,6 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
       originalValue: job.identifiers.customerPONumber,
     },
     "shipper.timeWindow": reviewIssueByPath["shipper.timeWindow"],
-    "cargoLines[0].handlingUnitCount": reviewIssueByPath["cargoLines[0].handlingUnitCount"],
     "cargoLines[0].commodityDescription": {
       sourceIds: ["SRC-XLS-001"],
       sourceLocations: ["XLS Cargo Details · Commodity Description"],
@@ -1847,13 +1840,6 @@ function JobFieldsTab({ shipment, issueState, fieldValues, onFieldChange, onReso
       return { ...line, [field.cargoKey]: value };
     });
     onFieldChange("cargoLines", nextCargoLines);
-    if (field.path === "cargoLines[0].handlingUnitCount") {
-      const issue = demoIssues.find((candidate) => candidate.fieldPath === field.path);
-      const parsedValue = Number.parseInt(String(value).replace(/,/g, ""), 10);
-      if (issue && Number.isFinite(parsedValue) && issueState[issue.issueId]?.status === "unresolved") {
-        onResolve(issue.issueId, { label: `Confirmed ${parsedValue} pallets`, value: parsedValue });
-      }
-    }
   };
   const updateRouteStop = (field, value) => {
     const nextRouteStops = routeStops.map((stop, index) => {
@@ -2592,10 +2578,9 @@ function ReviewTab({ issueState, selectedIssueId, onSelectIssue, onResolve, filt
 function OutputTab({ committed, issueState }) {
   const job = fixture.jobDraft;
   const equipmentResolution = issueState["ISSUE-MISSING-001"];
-  const palletResolution = issueState["ISSUE-CONFLICT-001"];
   const instructionResolution = issueState["ISSUE-UNMAPPED-001"];
   const equipmentValue = equipmentResolution.value || (equipmentResolution.deferred ? "Deferred · owner unresolved" : "Equipment type unresolved");
-  const palletValue = palletResolution.value ? `${palletResolution.value} pallets` : "8 / 10 conflict";
+  const palletValue = `${job.cargoLines[0].handlingUnitCount} pallets`;
   const instructionValue = instructionResolution.status === "resolved" && instructionResolution.includeInstructions === false
     ? "Unmapped charge instruction ignored for this demo."
     : job.instructions;
@@ -2621,7 +2606,7 @@ function OutputTab({ committed, issueState }) {
         </div>
         <table>
           <thead><tr><th>Handling Units</th><th>Packages</th><th>Weight</th><th>Commodity</th></tr></thead>
-          <tbody><tr><td>{committed ? palletValue : "8 / 10 conflict"}</td><td>120 cartons</td><td>2,450 lb</td><td>Consumer electronic accessories</td></tr></tbody>
+          <tbody><tr><td>{palletValue}</td><td>120 cartons</td><td>2,450 lb</td><td>Consumer electronic accessories</td></tr></tbody>
         </table>
         <div className="bol-instructions"><small>Special instructions</small><p>{instructionValue}</p></div>
         <footer><span>Carrier / PRO: Not assigned</span><span>Signatures & legal text: Definition required</span></footer>
@@ -2647,7 +2632,7 @@ function SubmitConfirmation({ open, shipment, job, equipmentType, blockerCount, 
           {isBlocked ? <CircleAlert size={18} /> : <Info size={18} />}
           <div>
             {isBlocked && <strong>Resolve candidate blockers before confirming</strong>}
-            <span>{isBlocked ? "Return to shipment details and resolve or defer the blocking issues." : "After confirmation, Charge & Cost is recalculated from the confirmed shipment data. The BOL becomes ready to export."}</span>
+            <span>{isBlocked ? "Return to shipment details and resolve or defer the blocking issues." : "After confirmation, the BOL becomes ready to export."}</span>
           </div>
         </div>
         <div className="submit-confirmation-card">
@@ -2964,7 +2949,6 @@ function ShipmentPanel({
   onRestoreIssueState,
   initialSourceFiles = EMPTY_SOURCE_FILES,
 }) {
-  const [pricingNeedsRecalculation, setPricingNeedsRecalculation] = useState(false);
   const [activeDetailTab, setActiveDetailTab] = useState(initialDetailTab);
   const [sourcePanelRequest, setSourcePanelRequest] = useState(0);
   const [editing, setEditing] = useState(initialEditing);
@@ -3020,7 +3004,6 @@ function ShipmentPanel({
   const sourceEditBaselineRef = useRef({ additionalSources, removedSourceIds: [] });
   const adjustmentEditBaselineRef = useRef(manualAdjustments);
   const pricingLineEditBaselineRef = useRef(pricingLineOverrides);
-  const pricingRecalculationBaselineRef = useRef(false);
   useEffect(() => {
     const savedValues = initialFieldValues || {};
     const savedSources = mapExtractedSources(initialSourceFiles);
@@ -3029,8 +3012,6 @@ function ShipmentPanel({
     setActiveDetailTab(initialDetailTab);
     setSourcePanelRequest(0);
     setShipmentActionAnchorEl(null);
-    setPricingNeedsRecalculation(false);
-    pricingRecalculationBaselineRef.current = false;
     editBaselineRef.current = { fieldValues: savedValues, issueState };
     setAdditionalSources(savedSources);
     setRemovedSourceIds([]);
@@ -3155,7 +3136,6 @@ function ShipmentPanel({
       vendor: { ...(pricingLineOverrides.vendor || {}) },
     };
     rateSelectionBaselineRef.current = { customer: selectedRatePlanId, vendor: selectedVendorRatePlanId };
-    pricingRecalculationBaselineRef.current = pricingNeedsRecalculation;
     setEditing(true);
   };
   const cancelEditing = () => {
@@ -3165,7 +3145,6 @@ function ShipmentPanel({
     setRemovedSourceIds(sourceEditBaselineRef.current.removedSourceIds);
     setSelectedRatePlanId(rateSelectionBaselineRef.current.customer);
     setSelectedVendorRatePlanId(rateSelectionBaselineRef.current.vendor);
-    setPricingNeedsRecalculation(pricingRecalculationBaselineRef.current);
     if (JSON.stringify(manualAdjustments) !== JSON.stringify(adjustmentEditBaselineRef.current)) {
       onRestoreAdjustments?.(adjustmentEditBaselineRef.current);
     }
@@ -3182,11 +3161,6 @@ function ShipmentPanel({
     onSaveDraft?.(fieldValues);
     onSaveRateSelection?.({ customer: selectedRatePlanId, vendor: selectedVendorRatePlanId });
     setEditing(false);
-  };
-  const recalculatePricing = () => {
-    setPricingNeedsRecalculation(false);
-    setActiveDetailTab("billing");
-    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: "auto" }));
   };
   const changeDetailTab = (_, value) => {
     setActiveDetailTab(value);
@@ -3289,18 +3263,6 @@ function ShipmentPanel({
             </section>
           ) : activeDetailTab === "billing" ? (
             <section className="single-page-section billing-page-section" id="charges-section" aria-labelledby={`charges-${shipment.shipmentId}`}>
-              {pricingNeedsRecalculation ? (
-                <Alert
-                  className="pricing-recalculation-alert"
-                  severity="warning"
-                  variant="outlined"
-                  icon={<CircleDollarSign size={20} />}
-                  action={<Button size="small" variant="outlined" onClick={recalculatePricing}>Recalculate</Button>}
-                >
-                  <strong>Pricing needs recalculation</strong>
-                  <div>Shipment details that affect pricing have changed. Recalculate to refresh Customer Charge and Vendor Cost.</div>
-                </Alert>
-              ) : null}
               <ShipmentPricingSection shipment={{ ...shipment, customer: pricingCustomer }} pricingResult={appliedPricingResult} ratePlan={relatedQuote} ratePlanOptions={ratePlanOptions} selectedRatePlanId={selectedRatePlanId} onRatePlanChange={changeCustomerRatePlan} vendorRatePlanOptions={vendorRatePlanOptions} selectedVendorRatePlanId={selectedVendorRatePlanId} onVendorRatePlanChange={changeVendorRatePlan} adjustments={manualAdjustments} pricingLineOverrides={pricingLineOverrides} onUpdatePricingLine={onUpdatePricingLine} onResetPricingSide={onResetPricingSide} onAddAdjustment={onAddAdjustment} onUpdateAdjustment={onUpdateAdjustment} onRemoveAdjustment={onRemoveAdjustment} onOpenRatePlan={onOpenQuote} onOpenVendorRatePlan={onOpenCarrierRate} editing={contentEditing} actorLabel="Demo user" />
             </section>
           ) : <>
@@ -3324,16 +3286,7 @@ function ShipmentPanel({
               issueState={issueState}
               fieldValues={fieldValues}
               onFieldChange={(path, value) => {
-                const previousValue = fieldValues[path];
                 setFieldValues((current) => ({ ...current, [path]: value }));
-                const pricingRelevant = path === "overview.customer"
-                  || path === "overview.serviceType"
-                  || path === "equipmentRequirements[0].type"
-                  || path === "serviceRequirements[]"
-                  || path === "carrierAssignment.carrier"
-                  || path.startsWith("routeStops")
-                  || path.startsWith("cargoLines");
-                if (pricingRelevant && JSON.stringify(previousValue) !== JSON.stringify(value)) setPricingNeedsRecalculation(true);
               }}
               onResolve={resolveIssue}
               partners={partners}
@@ -3352,14 +3305,7 @@ function ShipmentPanel({
               editing={contentEditing}
               partners={partners}
               onFieldChange={(path, value) => {
-                const previousValue = modeDetailValue(fieldValues, shipment, path);
                 setFieldValues((current) => ({ ...current, [path]: value }));
-                const pricingRelevant = path === "overview.customer"
-                  || path === "overview.serviceType"
-                  || path.includes("weight")
-                  || path === "mode.containers"
-                  || path === "mode.dimensions";
-                if (pricingRelevant && JSON.stringify(previousValue) !== JSON.stringify(value)) setPricingNeedsRecalculation(true);
               }}
             />}
           </section>

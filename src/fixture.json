@@ -258,35 +258,6 @@
       "prototypeQuestion": "Ops 是否需要看到 Confidence 數值，還是只需要 Low Confidence 狀態與來源對照？"
     },
     {
-      "issueId": "ISSUE-CONFLICT-001",
-      "fieldPath": "cargoLines[0].handlingUnitCount",
-      "issueType": "conflict",
-      "severity": "candidate_blocker",
-      "resolutionStatus": "unresolved",
-      "sourceIds": [
-        "SRC-PDF-001",
-        "SRC-XLS-001"
-      ],
-      "sourceLocations": [
-        "PDF page 1: Handling Units",
-        "XLS Cargo row 3: Pallet Count"
-      ],
-      "sourceValues": [
-        {
-          "sourceId": "SRC-PDF-001",
-          "value": 8
-        },
-        {
-          "sourceId": "SRC-XLS-001",
-          "value": 10
-        }
-      ],
-      "originalValue": 8,
-      "proposedValue": 8,
-      "correctedValue": null,
-      "prototypeQuestion": "來源衝突時是否有固定優先順序，或必須由 Ops 逐次判斷？"
-    },
-    {
       "issueId": "ISSUE-UNMAPPED-001",
       "fieldPath": "instructions",
       "issueType": "unmapped",
@@ -310,7 +281,6 @@
       "issueIds": [
         "ISSUE-MISSING-001",
         "ISSUE-LOW-001",
-        "ISSUE-CONFLICT-001",
         "ISSUE-UNMAPPED-001"
       ]
     },
@@ -331,12 +301,6 @@
       ]
     },
     {
-      "presetId": "source_conflict",
-      "issueIds": [
-        "ISSUE-CONFLICT-001"
-      ]
-    },
-    {
       "presetId": "unmapped_information",
       "issueIds": [
         "ISSUE-UNMAPPED-001"
@@ -345,8 +309,7 @@
     {
       "presetId": "commit_blocked",
       "issueIds": [
-        "ISSUE-MISSING-001",
-        "ISSUE-CONFLICT-001"
+        "ISSUE-MISSING-001"
       ]
     }
   ],

@@ -2628,33 +2628,12 @@ select:focus-visible,
 
 .pricing-section { padding-top: 0; }
 .billing-page-section > .notice { max-width: 1040px; margin: 0 auto 16px; }
-.pricing-recalculation-alert.MuiAlert-root {
-  max-width: 1040px;
-  margin: 0 auto 16px;
-  align-items: center;
-  color: var(--ink);
-  background: var(--amber-soft);
-  border-color: #f2d5aa;
-}
-.pricing-recalculation-alert .MuiAlert-icon { color: var(--amber); opacity: 1; }
 .pricing-estimate-alert.MuiAlert-root {
   color: #344054;
   background: #f5f9ff;
   border-color: #bfd3f2;
 }
 .pricing-estimate-alert .MuiAlert-icon { color: var(--blue); }
-.pricing-recalculation-alert .MuiAlert-message {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-  font-size: 13px;
-  line-height: 20px;
-}
-.pricing-recalculation-alert .MuiAlert-action {
-  margin-right: 0;
-  padding-top: 0;
-}
-.pricing-recalculation-alert .MuiButton-root { white-space: nowrap; }
 .single-page-section > .pricing-section { max-width: 1040px; margin: 0 auto; padding: 0; background: transparent; border: 0; border-radius: 0; }
 .pricing-section-heading { align-items: flex-start; }
 .pricing-section-heading h2 { font-size: 18px; line-height: 26px; }
@@ -5275,8 +5254,6 @@ select:focus-visible,
 @media (max-width: 599px) {
   .pricing-plan-change-summary { grid-template-columns: 1fr; }
   .pricing-plan-change-summary > svg { transform: rotate(90deg); }
-  .pricing-recalculation-alert.MuiAlert-root { align-items: flex-start; }
-  .pricing-recalculation-alert .MuiAlert-action { align-self: center; margin-left: 8px; }
   .detail-page-sticky-header .detail-page-header { padding: 8px 16px; }
   .detail-header-row { gap: 6px 10px; }
   .detail-header-row > .MuiButton-root:first-child { width: max-content; margin: 0; padding-inline: 0; }
