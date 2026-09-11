@@ -111,6 +111,12 @@ const quotationShipmentModeOptions = [
   { value: "AIR", label: "Air" },
   { value: "TRUCKING", label: "Trucking" },
 ];
+const carrierServiceTypeOptions = {
+  TRUCKING: ["LTL", "FTL"],
+  OCEAN: ["FCL", "LCL"],
+  AIR: ["Air Freight"],
+};
+const getCarrierServiceTypeOptions = (transportMode) => (carrierServiceTypeOptions[transportMode] || []).map((value) => ({ value, label: value }));
 const quotationEquipmentTypeOptions = {
   TRUCKING: ["Van / Dry Van (V)", "Reefer (R)", "Flatbed (F)", "Straight Box Truck (SB)", "Sprinter / Cargo Van", "Container (C)", "Step Deck (SD)", "Power Only (PO)"],
   OCEAN: ["20' General", "40' General", "40' High Cube", "20' Reefer", "40' Reefer"],
@@ -3690,6 +3696,8 @@ function IntakePanel({ onClose, onPrepare, autoStart = false, uploadedFiles = []
 }
 
 function QuotationPreviewDialog({ quote, onClose }) {
+  const [exportState, setExportState] = useState("idle");
+  const quotationSheetRef = useRef(null);
   if (!quote) return null;
   const hasServiceItems = (quote.serviceItems || []).length > 0;
   const usesServiceItems = hasServiceItems && (quote.rateMatrix || []).length === 0 && (quote.surchargeRules || []).length === 0;
@@ -3699,6 +3707,43 @@ function QuotationPreviewDialog({ quote, onClose }) {
     const suffix = rule.unit === "per 30 min" ? " / 30 min" : rule.unit === "per unit" ? " / unit" : "";
     return `${formatMoney(rule.rate, quote.currency)}${suffix}`;
   };
+  const exportQuotationPdf = async () => {
+    if (!quotationSheetRef.current || exportState === "exporting") return;
+    setExportState("exporting");
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      if (document.fonts?.ready) await document.fonts.ready;
+      const canvas = await html2canvas(quotationSheetRef.current, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        logging: false,
+        useCORS: true,
+      });
+      const pdf = new jsPDF({ orientation: "portrait", unit: "pt", format: "letter", compress: true });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 18;
+      const scale = Math.min((pageWidth - margin * 2) / canvas.width, (pageHeight - margin * 2) / canvas.height);
+      const imageWidth = canvas.width * scale;
+      const imageHeight = canvas.height * scale;
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", (pageWidth - imageWidth) / 2, margin, imageWidth, imageHeight, undefined, "FAST");
+      const blob = pdf.output("blob");
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `Quotation_${quote.quoteId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+      setExportState("success");
+    } catch (error) {
+      setExportState("error");
+    }
+  };
 
   return (
     <Dialog open onClose={onClose} maxWidth="lg" fullWidth aria-labelledby="quotation-preview-title" className="quotation-preview-dialog">
@@ -3707,7 +3752,7 @@ function QuotationPreviewDialog({ quote, onClose }) {
         <StatusChip label={`Version ${quote.version}`} tone="neutral" />
       </DialogTitle>
       <DialogContent dividers className="quotation-preview-content">
-        <section className="quotation-preview-sheet" aria-label={`Quotation ${quote.quoteId}`}>
+        <section className="quotation-preview-sheet" aria-label={`Quotation ${quote.quoteId}`} ref={quotationSheetRef}>
           <header className="quotation-document-header">
             <div className="quotation-document-brand">
               <span className="quotation-document-logo">B</span>
@@ -3808,8 +3853,11 @@ function QuotationPreviewDialog({ quote, onClose }) {
         </section>
       </DialogContent>
       <DialogActions sx={{ px: 3, py: 2 }}>
+        {exportState === "error" ? <span className="bol-export-status is-error" role="alert"><CircleAlert size={16} />PDF export failed</span> : null}
         <Button variant="outlined" onClick={onClose}>Close</Button>
-        <Button variant="contained" startIcon={<Download size={17} />} onClick={() => window.print()}>Export PDF</Button>
+        <Button variant="contained" disabled={exportState === "exporting"} startIcon={exportState === "exporting" ? <CircularProgress size={16} color="inherit" /> : <Download size={17} />} onClick={exportQuotationPdf}>
+          {exportState === "exporting" ? "Exporting…" : "Export PDF"}
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -4326,6 +4374,15 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
 
   const displayedPlan = editing ? draft : plan;
   const updateDraftField = (field, value) => setDraft((current) => ({ ...current, [field]: value }));
+  const updateTransportMode = (transportMode) => setDraft((current) => {
+    const serviceOptions = getCarrierServiceTypeOptions(transportMode);
+    const currentServiceTypeIsValid = serviceOptions.some((option) => option.value === current.serviceType);
+    return {
+      ...current,
+      transportMode,
+      serviceType: currentServiceTypeIsValid ? current.serviceType : serviceOptions.length === 1 ? serviceOptions[0].value : "",
+    };
+  });
   const updateRule = (index, field, value) => setDraft((current) => ({
     ...current,
     chargeLines: current.chargeLines.map((line, lineIndex) => lineIndex === index ? { ...line, [field]: value } : line),
@@ -4334,6 +4391,7 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
     draft.counterparty.trim()
     && draft.name.trim()
     && draft.transportMode
+    && draft.serviceType
     && draft.currency
     && draft.chargeLines.length
     && draft.chargeLines.every((line) => line.templateKey && line.description.trim() && line.appliesWhen.trim() && Number(line.amount) > 0),
@@ -4482,7 +4540,7 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
     >
       <div className="panel-stack quotation-panel-stack">
         {!isCreating && displayedPlan.status === "accepted" ? <Alert className="rate-scope-alert" severity="info" variant="outlined" icon={<Info size={18} />}>
-          Applies to {formatTransportMode(displayedPlan.transportMode)} shipments fulfilled by {displayedPlan.counterparty || "the selected carrier"}.
+          Applies to {displayedPlan.serviceType} {formatTransportMode(displayedPlan.transportMode)} shipments fulfilled by {displayedPlan.counterparty || "the selected carrier"}.
         </Alert> : null}
         <section className="ledger-section quotation-card quotation-overview-card">
           <div className="section-heading"><h2>Overview</h2></div>
@@ -4490,7 +4548,8 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
             <div className="rate-plan-edit-grid">
               <AutocompleteInput label="Carrier" required options={partners.filter((partner) => partner.type === "carrier").map((partner) => partner.name)} value={draft.counterparty} onChange={(value) => updateDraftField("counterparty", value || "")} />
               <TextInput label="Rate plan name" required value={draft.name} onChange={(event) => updateDraftField("name", event.target.value)} />
-              <SelectInput label="Transport mode" required value={draft.transportMode} onChange={(event) => updateDraftField("transportMode", event.target.value)} options={quotationShipmentModeOptions} />
+              <SelectInput label="Transport mode" required value={draft.transportMode} onChange={(event) => updateTransportMode(event.target.value)} options={quotationShipmentModeOptions} />
+              <SelectInput label="Service Type" required value={draft.serviceType} onChange={(event) => updateDraftField("serviceType", event.target.value)} options={getCarrierServiceTypeOptions(draft.transportMode)} placeholder="Select service type" />
               <TextInput label="Rate No." value={draft.ratePlanId} disabled helperText={isCreating ? "Generated automatically." : "Rate number cannot be changed after creation."} />
               <SelectInput label="Currency" required inputProps={{ "aria-label": "Currency" }} value={draft.currency} onChange={(event) => updateDraftField("currency", event.target.value)} options={[{ value: "USD", label: "USD" }, { value: "CAD", label: "CAD" }, { value: "MXN", label: "MXN" }]} />
             </div>
@@ -4500,6 +4559,7 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
               <div><dt>Rate plan name</dt><dd>{displayedPlan.name}</dd></div>
               <div><dt>Rate No.</dt><dd>{displayedPlan.ratePlanId}</dd></div>
               <div><dt>Transport mode</dt><dd>{formatTransportMode(displayedPlan.transportMode)}</dd></div>
+              <div><dt>Service Type</dt><dd>{displayedPlan.serviceType || EMPTY_VALUE}</dd></div>
               <div><dt>Currency</dt><dd>{displayedPlan.currency}</dd></div>
             </dl>
           )}
@@ -4559,13 +4619,40 @@ function CarrierRatePlanPanel({ plan, partners, onSave, onClose, onDelete, initi
   );
 }
 
-function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
+function BolDocument({ shipment, stop, fieldValues = {}, pageIndex = 0, pageCount = 1 }) {
   const [origin, destination] = shipment.route.split(" → ");
   const bolNumber = stop?.bolNumber || shipment.bolNumber || "Pending submission";
   const deliveryCompany = stop?.company || shipment.customer;
   const deliveryAddress = stop?.address || destination || "California";
   const bolCargoLines = stop?.cargoLines || fixture.jobDraft.cargoLines.slice(0, 1);
   const bolCargoTotals = calculateCargoTotals(bolCargoLines);
+  const representativeJob = shipment.shipmentId === fixture.fixtureId ? fixture.jobDraft : null;
+  const resolvedField = (path, fallback) => Object.prototype.hasOwnProperty.call(fieldValues, path) && fieldValues[path] !== ""
+    ? fieldValues[path]
+    : fallback;
+  const routeStops = Array.isArray(fieldValues.routeStops) && fieldValues.routeStops.length
+    ? fieldValues.routeStops
+    : representativeJob?.routeStops || [];
+  const pickupStop = routeStops.find((candidate) => candidate.activity === "Pickup");
+  const customerPo = resolvedField("identifiers.customerPONumber", representativeJob?.identifiers.customerPONumber || `PO-${shipment.shipmentId.slice(-6)}`);
+  const referenceNumber = resolvedField("identifiers.referenceNumber", representativeJob?.identifiers.referenceNumber || shipment.referenceNumber || EMPTY_VALUE);
+  const freightTerms = resolvedField("commercial.freightTerms", representativeJob?.commercial.freightTerms || "Prepaid");
+  const billTo = resolvedField("commercial.billTo", representativeJob?.commercial.billTo || "BEST USA billing account");
+  const carrierName = resolvedField("carrierAssignment.carrier", representativeJob?.carrierAssignment.carrier || shipment.carrier || "Carrier pending");
+  const rateReference = resolvedField("carrierAssignment.quoteReference", representativeJob?.carrierAssignment.quoteReference || EMPTY_VALUE);
+  const shipperCompany = resolvedField("shipper.company", representativeJob?.shipper.company || pickupStop?.company || (origin ? `${origin} Distribution Center` : EMPTY_VALUE));
+  const shipperAddress = resolvedField("shipper.address", representativeJob?.shipper.address || pickupStop?.address || origin || EMPTY_VALUE);
+  const shipperContact = representativeJob?.shipper.contact
+    ? `${representativeJob.shipper.contact.name} · ${representativeJob.shipper.contact.phone}`
+    : pickupStop?.contact || "Shipping contact pending";
+  const serviceRequirements = representativeJob?.serviceRequirements || [];
+  const requiresNotify = serviceRequirements.some((requirement) => requirement.type === "Notify");
+  const requiresLiftgate = serviceRequirements.some((requirement) => requirement.type === "Liftgate" && (!requirement.deliveryStopId || requirement.deliveryStopId === stop?.stopId));
+  const specialInstructions = [
+    requiresNotify ? "Notify consignee before arrival." : null,
+    requiresLiftgate ? "Liftgate service required." : null,
+    representativeJob?.instructions || null,
+  ].filter(Boolean).join(" ") || "No special instructions provided.";
   return (
     <section className="bol-sheet bol-dialog-sheet" aria-label={`BOL ${bolNumber} for ${deliveryCompany}`}>
       <header className="bol-document-header">
@@ -4589,17 +4676,17 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
       </header>
       <div className="bol-reference-row">
         <div><small>SHIP DATE</small><strong>{formatDate(shipment.pickupDate, { withYear: true })}</strong></div>
-        <div><small>CUSTOMER PO</small><strong>PO-{shipment.shipmentId.slice(-6)}</strong></div>
+        <div><small>CUSTOMER PO</small><strong>{customerPo}</strong></div>
         <div><small>SERVICE</small><strong>{formatTransportMode(shipment.transportMode)} · {shipment.serviceType}</strong></div>
-        <div><small>FREIGHT TERMS</small><strong>Prepaid</strong></div>
+        <div><small>FREIGHT TERMS</small><strong>{freightTerms}</strong></div>
       </div>
       <div className="bol-party-grid">
         <section>
           <small>SHIP FROM</small>
-          <strong>{origin ? `${origin} Distribution Center` : EMPTY_VALUE}</strong>
-          <span>1250 Commerce Way</span>
-          <span>{origin || "California"}</span>
-          <span>Contact: Shipping Department · (510) 555-0142</span>
+          <strong>{shipperCompany}</strong>
+          <span>{shipperAddress}</span>
+          <span>Contact: {shipperContact}</span>
+          {pickupStop?.timeWindow ? <span>Window: {pickupStop.timeWindow}</span> : null}
         </section>
         <section>
           <small>SHIP TO</small>
@@ -4610,14 +4697,13 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
         </section>
         <section>
           <small>THIRD PARTY FREIGHT CHARGES BILL TO</small>
-          <strong>BEST USA Forwarder</strong>
-          <span>2100 E. Pacific Coast Highway</span>
-          <span>Long Beach, CA 90804</span>
+          <strong>{billTo}</strong>
+          <span>Billing terms: {freightTerms}</span>
         </section>
         <section>
           <small>CARRIER</small>
-          <strong>BEST USA Contracted Carrier</strong>
-          <span>SCAC: BUSA · Trailer: Pending</span>
+          <strong>{carrierName}</strong>
+          <span>Rate reference: {rateReference}</span>
           <span>PRO number: Assigned at pickup</span>
         </section>
       </div>
@@ -4632,8 +4718,8 @@ function BolDocument({ shipment, stop, pageIndex = 0, pageCount = 1 }) {
         </tbody>
       </table>
       <div className="bol-special-services">
-        <div><small>SPECIAL INSTRUCTIONS</small><p>Call consignee before delivery. Liftgate service required. Do not break pallets without written authorization.</p></div>
-        <div><small>DECLARED VALUE</small><strong>$25,000 USD</strong></div>
+        <div><small>SPECIAL INSTRUCTIONS</small><p>{specialInstructions}</p></div>
+        <div><small>REFERENCE</small><strong>{referenceNumber}</strong></div>
       </div>
       <p className="bol-legal-copy">Received, subject to individually determined rates or contracts agreed upon in writing between the carrier and shipper. The property described above is in apparent good order, except as noted, and is marked, consigned, and destined as indicated.</p>
       <div className="bol-signature-grid">
@@ -4818,6 +4904,18 @@ function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExpor
   if (!shipment) return null;
   const activeStop = bolStops.find((candidate) => candidate.stopId === activeStopId) || bolStops[0] || stop;
   const activeStopIndex = Math.max(0, bolStops.findIndex((candidate) => candidate.stopId === activeStop?.stopId));
+  const navigateToBolPage = (nextIndex) => {
+    const boundedIndex = Math.max(0, Math.min(bolStops.length - 1, nextIndex));
+    const pages = Array.from(documentsRef.current?.querySelectorAll("[data-bol-stop-id]") || []);
+    const targetPage = pages[boundedIndex];
+    const targetStopId = bolStops[boundedIndex]?.stopId;
+    if (!targetPage || !targetStopId) return;
+    setActiveStopId(targetStopId);
+    targetPage.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
+  };
   const syncActiveBolOnScroll = () => {
     if (isHouseDocument || bolStops.length < 2 || !previewContentRef.current) return;
     const viewportRect = previewContentRef.current.getBoundingClientRect();
@@ -4834,14 +4932,24 @@ function BolPreviewDialog({ shipment, stop, fieldValues = {}, onClose, autoExpor
     <Dialog open onClose={onClose} maxWidth="lg" fullWidth aria-labelledby="bol-preview-title" className="bol-preview-dialog">
       <DialogTitle className="bol-preview-dialog-title">
         <span id="bol-preview-title">{isHouseDocument ? `${outputDocument.label} Preview` : "Bill Of Lading Preview"}</span>
-        {!isHouseDocument && bolStops.length > 1 ? <span className="bol-preview-page-indicator" aria-live="polite">{activeStopIndex + 1}/{bolStops.length}</span> : null}
+        {!isHouseDocument && bolStops.length > 1 ? (
+          <div className="bol-preview-page-controls" role="group" aria-label="BOL page navigation">
+            <Tooltip title="Previous BOL" placement="bottom">
+              <span><IconButton className="bol-preview-page-button" aria-label="Previous BOL" disabled={activeStopIndex === 0} onClick={() => navigateToBolPage(activeStopIndex - 1)}><ChevronLeft size={18} /></IconButton></span>
+            </Tooltip>
+            <span className="bol-preview-page-indicator" aria-live="polite">{activeStopIndex + 1}/{bolStops.length}</span>
+            <Tooltip title="Next BOL" placement="bottom">
+              <span><IconButton className="bol-preview-page-button" aria-label="Next BOL" disabled={activeStopIndex === bolStops.length - 1} onClick={() => navigateToBolPage(activeStopIndex + 1)}><ChevronRight size={18} /></IconButton></span>
+            </Tooltip>
+          </div>
+        ) : null}
       </DialogTitle>
       <DialogContent dividers className="bol-dialog-content" ref={previewContentRef} onScroll={syncActiveBolOnScroll}>
         <div className="bol-preview-documents is-continuous" ref={documentsRef}>
           {bolStops.map((candidate, pageIndex) => (
             <div className="bol-preview-document-page" data-bol-stop-id={candidate.stopId} key={candidate.stopId}>
               {!isHouseDocument && bolStops.length > 1 ? <div className="bol-preview-document-marker"><span>{pageIndex + 1}/{bolStops.length}</span></div> : null}
-              {isHouseDocument ? <HouseTransportDocument shipment={shipment} fieldValues={fieldValues} /> : <BolDocument shipment={shipment} stop={candidate} pageIndex={pageIndex} pageCount={bolStops.length} />}
+              {isHouseDocument ? <HouseTransportDocument shipment={shipment} fieldValues={fieldValues} /> : <BolDocument shipment={shipment} stop={candidate} fieldValues={fieldValues} pageIndex={pageIndex} pageCount={bolStops.length} />}
             </div>
           ))}
         </div>

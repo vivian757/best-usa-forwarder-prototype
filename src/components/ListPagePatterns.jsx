@@ -1,6 +1,5 @@
 import { Box, Button, ButtonBase, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Drawer, FormControl, IconButton, MenuItem, Paper, Select, Stack, Typography } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 
 export function ImportButton({ children = "Import", ...props }) {
   return <Button variant="outlined" color="primary" startIcon={<Download size={17} />} {...props}>{children}</Button>;
@@ -54,7 +53,7 @@ export function TableToolbar({ rowsPerPage, onRowsPerPageChange, total, from, to
           </>
         ) : null}
         {searchOnly ? leadingActions : null}
-        <IconButton aria-label="Search records" onClick={onOpenSearch} sx={{ width: 40, height: 40, flexShrink: 0, color: "primary.main", borderRadius: 2, "&:hover": { backgroundColor: "primary.100" } }}><SearchIcon sx={{ fontSize: 21 }} /></IconButton>
+        <IconButton aria-label="Search records" onClick={onOpenSearch} sx={{ width: 40, height: 40, flexShrink: 0, color: "primary.main", borderRadius: 2, "&:hover": { backgroundColor: "primary.100" } }}><Search size={21} aria-hidden="true" /></IconButton>
       </Stack>
     </Box>
   );

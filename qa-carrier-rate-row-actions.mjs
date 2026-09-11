@@ -20,7 +20,7 @@ try {
   await menu.waitFor();
   assert.deepEqual(await menu.getByRole("menuitem").allInnerTexts(), ["Edit", "Delete"], "Carrier rate actions are Edit then Delete");
   await menu.getByRole("menuitem", { name: "Edit", exact: true }).click();
-  await page.getByRole("heading", { name: "Pacific LTL Cost 2026", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Pacific FTL Multi-stop Cost 2026", exact: true }).waitFor();
   await page.getByRole("button", { name: "Save changes", exact: true }).waitFor();
 
   await openCarrierRates(page);

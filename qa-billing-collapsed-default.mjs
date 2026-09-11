@@ -23,7 +23,24 @@ try {
   assert.equal(await groups.first().getAttribute("aria-expanded"), "true", "The first billing group still opens on demand");
   assert.equal(await page.locator(".billing-counterparty-body").count(), 1, "Only the selected billing group opens");
 
-  console.log("Billing collapsed-default QA passed.");
+  const arGroup = page.locator(".billing-counterparty-group", { hasText: "Demo Retail Distribution LLC" });
+  if ((await arGroup.locator(".billing-counterparty-toggle").getAttribute("aria-expanded")) !== "true") {
+    await arGroup.locator(".billing-counterparty-toggle").click();
+  }
+  const arRow = arGroup.locator("tr", { hasText: "BILL-DEMO-004" });
+  await arRow.waitFor();
+  assert.match(await arRow.innerText(), /TRK-DEMO-001/);
+  assert.match(await arRow.innerText(), /\$2,550(?:\.00)?/);
+
+  await page.getByRole("tab", { name: "Pay-to (AP)", exact: true }).click();
+  const apGroup = page.locator(".billing-counterparty-group", { hasText: "Pacific Linehaul LLC" });
+  await apGroup.locator(".billing-counterparty-toggle").click();
+  const apRow = apGroup.locator("tr", { hasText: "BILL-DEMO-005" });
+  await apRow.waitFor();
+  assert.match(await apRow.innerText(), /TRK-DEMO-001/);
+  assert.match(await apRow.innerText(), /\$1,975(?:\.00)?/);
+
+  console.log("Billing grouped AR/AP QA passed.");
 } finally {
   await browser.close();
 }

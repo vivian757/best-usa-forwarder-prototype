@@ -21,7 +21,7 @@ try {
 
   const firstRow = page.locator('.MuiDataGrid-row[data-id="RATE-DEMO-001"]');
   await firstRow.waitFor();
-  assert.equal((await firstRow.locator('[data-field="name"]').textContent()).trim(), "2026 Retail West LTL", "Quote Plan contains the plan name only");
+  assert.equal((await firstRow.locator('[data-field="name"]').textContent()).trim(), "2026 Retail California FTL", "Quote Plan contains the plan name only");
   assert.equal((await firstRow.locator('[data-field="quoteId"]').textContent()).trim(), "RATE-DEMO-001", "Quote No. is displayed in its own column");
 
   console.log(JSON.stringify({ status: "passed", url, headers }, null, 2));

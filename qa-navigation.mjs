@@ -124,12 +124,12 @@ try {
   await page.screenshot({ path: `${outputDir}/desktop-quotation-edit.png`, fullPage: false });
 
   const ratePlanName = page.getByLabel("Rate plan name");
-  await ratePlanName.fill("2026 Retail West LTL updated");
+  await ratePlanName.fill("2026 Retail California FTL updated");
   await page.getByRole("button", { name: "Save changes", exact: true }).click();
   await page.getByText("Rate plan updated.").waitFor();
   await page.getByRole("button", { name: "Edit", exact: true }).waitFor();
   await page.getByRole("button", { name: "Back to list" }).click();
-  await page.getByText("2026 Retail West LTL updated").waitFor();
+  await page.getByText("2026 Retail California FTL updated").waitFor();
   await desktop.close();
 
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: "reduce" });

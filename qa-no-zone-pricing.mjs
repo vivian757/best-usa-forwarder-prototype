@@ -11,20 +11,20 @@ try {
 
   await page.locator('nav [role="button"]:visible').filter({ hasText: /^Quotations$/ }).first().click();
   await page.locator('.MuiDataGrid-row[data-id="RATE-DEMO-001"]').click();
-  await page.getByRole("heading", { name: "2026 Retail West LTL", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "2026 Retail California FTL", exact: true }).waitFor();
   assert.equal(await page.getByText(/Zone × tier matrix|Zone [A-Z]/).count(), 0, "Customer quote has no Zone pricing examples");
-  assert.ok(await page.getByText("Tiered rate", { exact: true }).count() > 0, "Customer quote uses Tiered rate");
+  assert.ok(await page.getByText("Flat rate", { exact: true }).count() > 0, "Customer quote uses Flat rate");
 
   await page.locator('nav [role="button"]:visible').filter({ hasText: /^Trucking$/ }).first().click();
   await page.locator('.MuiDataGrid-row[data-id="TRK-DEMO-001"]').click();
   await page.getByRole("tab", { name: "Charge & Cost", exact: true }).click();
   assert.equal(await page.getByText(/Zone × tier matrix|Zone [A-Z]/).count(), 0, "Shipment pricing has no Zone pricing examples");
-  assert.ok(await page.getByText("Tiered rate", { exact: true }).count() > 0, "Shipment pricing uses Tiered rate");
+  assert.ok(await page.getByText("Flat rate", { exact: true }).count() > 0, "Shipment pricing uses Flat rate");
 
-  await page.getByRole("button", { name: /Pacific LTL Cost 2026/ }).click();
-  await page.getByRole("heading", { name: "Pacific LTL Cost 2026", exact: true }).waitFor();
+  await page.getByRole("button", { name: /Pacific FTL Multi-stop Cost 2026/ }).click();
+  await page.getByRole("heading", { name: "Pacific FTL Multi-stop Cost 2026", exact: true }).waitFor();
   assert.equal(await page.getByText(/Zone × tier matrix|Zone [A-Z]/).count(), 0, "Carrier rate has no Zone pricing examples");
-  assert.ok(await page.getByText("Tiered rate", { exact: true }).count() > 0, "Carrier rate uses Tiered rate");
+  assert.ok(await page.getByText("Flat rate", { exact: true }).count() > 0, "Carrier rate uses Flat rate");
 
   console.log("No-Zone pricing QA passed.");
   await context.close();

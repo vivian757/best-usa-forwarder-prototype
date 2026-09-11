@@ -375,7 +375,7 @@ const ruleTemplateCatalog = [
 ];
 
 const costRatePlans = {
-  "TRK-DEMO-001": { ratePlanId: "COST-DEMO-001", name: "Pacific LTL Cost 2026", counterparty: "Pacific Linehaul LLC", serviceType: "LTL", serviceScope: "LTL · California", transportMode: "TRUCKING", status: "accepted", effectiveFrom: "2026-01-01", effectiveTo: "2026-12-31", lastUpdated: "2026-08-28", version: 1, currency: "USD" },
+  "TRK-DEMO-001": { ratePlanId: "COST-DEMO-001", name: "Pacific FTL Multi-stop Cost 2026", counterparty: "Pacific Linehaul LLC", serviceType: "FTL", serviceScope: "FTL · California multi-stop", transportMode: "TRUCKING", status: "accepted", effectiveFrom: "2026-01-01", effectiveTo: "2026-12-31", lastUpdated: "2026-09-11", version: 1, currency: "USD" },
   "TRK-DEMO-002": { ratePlanId: "COST-DEMO-002", name: "Golden Gate LTL Cost 2026", counterparty: "Golden Gate Freight", serviceType: "LTL", serviceScope: "LTL · West Coast", transportMode: "TRUCKING", status: "accepted", effectiveFrom: "2026-01-01", effectiveTo: "2026-12-31", lastUpdated: "2026-09-02", version: 2, currency: "USD" },
   "TRK-DEMO-003": { ratePlanId: "COST-DEMO-003", name: "West Coast FTL Cost 2026", counterparty: "West Coast Carrier Inc.", serviceType: "FTL", serviceScope: "FTL · Southwest", transportMode: "TRUCKING", status: "accepted", effectiveFrom: "2026-04-01", effectiveTo: "2026-12-31", lastUpdated: "2026-09-05", version: 1, currency: "USD" },
   "TRK-DEMO-004": { ratePlanId: "COST-DEMO-004", name: "Summit Refrigerated Cost 2026", counterparty: "Summit Transport LLC", serviceType: "LTL", serviceScope: "LTL · Refrigerated", transportMode: "TRUCKING", status: "accepted", effectiveFrom: "2026-02-01", effectiveTo: "2027-01-31", lastUpdated: "2026-09-07", version: 3, currency: "USD" },
@@ -387,7 +387,7 @@ const costRatePlans = {
 
 const quoteVersionHistory = {
   "RATE-DEMO-001": [
-    { historyId: "RATE-DEMO-001-V3", version: 3, event: "Edited", role: "Pricing Manager", changedAt: "2026-09-09T10:00:00+08:00", summary: "Added warehouse processing and storage service items to the customer quotation." },
+    { historyId: "RATE-DEMO-001-V3", version: 3, event: "Edited", role: "Pricing Manager", changedAt: "2026-09-11T10:00:00+08:00", summary: "Updated the quotation for the representative FTL multi-stop shipment." },
     { historyId: "RATE-DEMO-001-V2", version: 2, event: "Edited", role: "Pricing Manager", changedAt: "2026-09-07T16:30:00+08:00", summary: "Updated weight tiers and detention pricing." },
     { historyId: "RATE-DEMO-001-V1", version: 1, event: "Created", role: "Sales Operations", changedAt: "2025-11-15T10:00:00-08:00", summary: "Created the quote plan for the 2026 contract period." },
   ],
@@ -417,8 +417,8 @@ const vendorCostResults = {
   "TRK-DEMO-001": {
     calculationStatus: "estimated",
     chargeLines: [
-      { code: "BASE_LTL", description: "Carrier linehaul", source: "Tiered rate", templateKey: "tiered_rate", amount: 420 },
-      { code: "LIFTGATE", description: "Liftgate reimbursement", source: "Flat rate", templateKey: "flat_rate", amount: 50 },
+      { code: "BASE_FTL", description: "Carrier truck rate", source: "Per truck", templateKey: "flat_rate", amount: 1850 },
+      { code: "MULTI_STOP", description: "Additional delivery stop", source: "Per additional stop", templateKey: "flat_rate", amount: 125 },
     ],
     initialAdjustments: [],
   },
@@ -719,7 +719,7 @@ export const prototypeRepository = {
           ...result.chargeLines.map((line) => ({
             ...line,
             serviceGroup: line.serviceGroup || transportServiceGroup,
-            templateKey: line.code.startsWith("BASE_") ? "tiered_rate" : line.code === "COLD_CHAIN" ? "percentage_surcharge" : "flat_rate",
+            templateKey: line.code === "BASE_LTL" ? "tiered_rate" : line.code === "COLD_CHAIN" ? "percentage_surcharge" : "flat_rate",
           })),
           ...warehouseChargeLines,
         ],

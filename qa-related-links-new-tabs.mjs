@@ -27,19 +27,19 @@ try {
 
   await expectPopup(
     page,
-    () => page.getByRole("button", { name: /Open 2026 Retail West LTL version 2 in new tab/ }).click(),
+    () => page.getByRole("button", { name: /Open 2026 Retail California FTL version 3 in new tab/ }).click(),
     "quotation",
     "RATE-DEMO-001",
-    "2026 Retail West LTL",
+    "2026 Retail California FTL",
   );
   await page.getByRole("heading", { name: "TRK-DEMO-001", exact: true }).waitFor();
 
   await expectPopup(
     page,
-    () => page.getByRole("button", { name: /Open Pacific LTL Cost 2026 in new tab/ }).click(),
+    () => page.getByRole("button", { name: /Open Pacific FTL Multi-stop Cost 2026 in new tab/ }).click(),
     "carrier-rate",
     "COST-DEMO-001",
-    "Pacific LTL Cost 2026",
+    "Pacific FTL Multi-stop Cost 2026",
   );
 
   await page.getByRole("button", { name: "Billing & Accounting", exact: true }).click();

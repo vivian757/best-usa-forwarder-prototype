@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "qa:demo-data": "node qa-demo-data-consistency.mjs",
+    "qa:current-demo": "node qa-current-demo-flow.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

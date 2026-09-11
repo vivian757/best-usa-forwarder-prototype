@@ -11,7 +11,7 @@ try {
   await page.locator('nav [role="button"]:visible').filter({ hasText: /^Quotations$/ }).first().click();
   await page.getByRole("tab", { name: "Carrier Rates", exact: true }).click();
   await page.locator('.MuiDataGrid-row[data-id="COST-DEMO-001"]').click();
-  await page.getByRole("heading", { name: "Pacific LTL Cost 2026", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Pacific FTL Multi-stop Cost 2026", exact: true }).waitFor();
 
   const moreButton = page.getByRole("button", { name: "More carrier rate actions", exact: true });
   await moreButton.click();
@@ -23,7 +23,7 @@ try {
   const confirmDialog = page.getByRole("dialog", { name: "Delete Carrier Rate?", exact: true });
   await confirmDialog.waitFor();
   await confirmDialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("heading", { name: "Pacific LTL Cost 2026", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Pacific FTL Multi-stop Cost 2026", exact: true }).waitFor();
 
   console.log("Carrier rate detail actions QA passed.");
   await context.close();

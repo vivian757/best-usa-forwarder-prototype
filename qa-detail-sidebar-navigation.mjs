@@ -26,11 +26,11 @@ try {
   await page.getByRole("heading", { name: "Quotations", exact: true }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Edit Customer", exact: true }).count(), 0, "Customer detail closes when navigating to Quotations");
 
-  await page.getByText("2026 Retail West LTL", { exact: true }).first().click();
-  await page.getByRole("heading", { name: "2026 Retail West LTL", exact: true }).waitFor();
+  await page.getByText("2026 Retail California FTL", { exact: true }).first().click();
+  await page.getByRole("heading", { name: "2026 Retail California FTL", exact: true }).waitFor();
   await navigation.getByRole("button", { name: "Billing & Accounting", exact: true }).click();
   await page.getByRole("heading", { name: "Billing & Accounting", exact: true }).waitFor();
-  assert.equal(await page.getByRole("heading", { name: "2026 Retail West LTL", exact: true }).count(), 0, "Quotation detail closes when navigating to Billing");
+  assert.equal(await page.getByRole("heading", { name: "2026 Retail California FTL", exact: true }).count(), 0, "Quotation detail closes when navigating to Billing");
 
   await navigation.getByRole("button", { name: "Carriers", exact: true }).click();
   await page.getByRole("heading", { name: "Carriers", exact: true }).waitFor();

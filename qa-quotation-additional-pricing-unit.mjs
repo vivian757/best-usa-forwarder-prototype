@@ -13,7 +13,7 @@ try {
   await page.goto(url, { waitUntil: "networkidle" });
   await page.locator('.best-sidebar-shell:visible nav [role="button"]').filter({ hasText: "Quotations" }).click();
   await page.locator('.MuiDataGrid-row[data-id="RATE-DEMO-001"] [data-field="name"]').click();
-  await page.getByRole("heading", { name: "2026 Retail West LTL", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "2026 Retail California FTL", exact: true }).waitFor();
 
   const baseTable = page.getByRole("table", { name: "Customer rate matrix" });
   assert.deepEqual(await baseTable.getByRole("columnheader").allTextContents(), ["Rule template", "Equipment Type", "Configuration", "Rate"]);
@@ -47,7 +47,7 @@ try {
   assert.equal((await equipmentType.innerText()).trim(), "Reefer (R)", "Equipment Type can be changed per base rule");
   await baseTable.screenshot({ path: "/tmp/quotation-equipment-type.png" });
   const baseConfiguration = page.getByRole("combobox", { name: "Base rule 1 configuration", exact: true });
-  assert.equal((await baseConfiguration.innerText()).trim(), "0–2,500 lb", "Tiered base configuration shows only the weight range");
+  assert.equal((await baseConfiguration.innerText()).trim(), "Per truck", "FTL base configuration shows the per-truck pricing basis");
   assert.equal(await page.getByRole("combobox", { name: "Base rule 1 tier", exact: true }).count(), 0);
   assert.equal(await page.getByRole("combobox", { name: "Base rule 1 basis", exact: true }).count(), 0);
   const group = page.locator(".quotation-rule-group").filter({ has: page.getByRole("heading", { name: "Additional Pricing", exact: true }) });

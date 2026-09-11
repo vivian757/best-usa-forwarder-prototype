@@ -45,18 +45,15 @@ try {
 
   await openShipmentPricing(page, "Ocean", "OCN-DEMO-001");
   assert.equal(await page.getByText("No matching Customer Quote", { exact: true }).count(), 0, "Ocean pricing no longer uses the unmatched quote example");
-  await page.getByRole("button", { name: "2026 Retail Pacific FCL · v2", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Demo Ocean Line FCL Cost 2026 · v1", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Open 2026 Retail Pacific FCL version 2 in new tab", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Open Demo Ocean Line FCL Cost 2026 in new tab", exact: true }).waitFor();
   await page.getByText("Base ocean freight", { exact: true }).waitFor();
   await page.getByText("Documentation fee", { exact: true }).waitFor();
 
-  await page.getByRole("button", { name: "2026 Retail Pacific FCL · v2", exact: true }).click();
-  await page.getByRole("heading", { name: "2026 Retail Pacific FCL", exact: true }).waitFor();
-
   await openShipmentPricing(page, "Air", "AIR-DEMO-002");
   assert.equal(await page.getByText("No matching Customer Quote", { exact: true }).count(), 0, "Air pricing no longer uses the unmatched quote example");
-  await page.getByRole("button", { name: "2026 Home Supply Air Freight · v1", exact: true }).waitFor();
-  await page.getByRole("button", { name: "Demo Pacific Air Cargo Cost 2026 · v1", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Open 2026 Home Supply Air Freight version 1 in new tab", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Open Demo Pacific Air Cargo Cost 2026 in new tab", exact: true }).waitFor();
   await page.getByText("Base air freight", { exact: true }).waitFor();
   await page.getByText("Security screening", { exact: true }).waitFor();
 
