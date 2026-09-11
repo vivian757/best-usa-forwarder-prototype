@@ -1032,8 +1032,8 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                       {ratePlanOptions.map((option) => <MenuItem key={option.quoteId} value={option.quoteId}>{option.name} · v{option.version}</MenuItem>)}
                     </Select>
                   </FormControl>
-                  <Tooltip title="View quotation plan" placement="top">
-                    <IconButton size="small" aria-label={`View quotation plan ${ratePlan.quoteId}`} onClick={() => onOpenRatePlan(ratePlan.quoteId)}>
+                  <Tooltip title="Open quotation plan in new tab" placement="top">
+                    <IconButton size="small" aria-label={`Open quotation plan ${ratePlan.quoteId} in new tab`} onClick={() => onOpenRatePlan(ratePlan.quoteId)}>
                       <ArrowUpRight size={15} />
                     </IconButton>
                   </Tooltip>
@@ -1041,7 +1041,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
               ) : (
                 <div className="ledger-rate-plan-control is-view">
                   <span className="ledger-rate-plan-label">Customer Quote</span>
-                  <button type="button" className="ledger-rate-plan-link" onClick={() => onOpenRatePlan(ratePlan.quoteId)}>
+                  <button type="button" className="ledger-rate-plan-link" aria-label={`Open ${ratePlan.name} version ${ratePlan.version} in new tab`} onClick={() => onOpenRatePlan(ratePlan.quoteId)}>
                     <span>{ratePlan.name} · v{ratePlan.version}</span><ArrowUpRight size={15} />
                   </button>
                 </div>
@@ -1059,8 +1059,8 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
                       {vendorRatePlanOptions.map((option) => <MenuItem key={option.ratePlanId} value={option.ratePlanId}>{option.name} · v{option.version} · {option.counterparty}</MenuItem>)}
                     </Select>
                   </FormControl>
-                  <Tooltip title="View carrier rate" placement="top">
-                    <IconButton disabled={!ledger.plan?.ratePlanId} size="small" aria-label="View selected carrier rate" onClick={() => onOpenVendorRatePlan?.(ledger.plan.ratePlanId)}>
+                  <Tooltip title="Open carrier rate in new tab" placement="top">
+                    <IconButton disabled={!ledger.plan?.ratePlanId} size="small" aria-label="Open selected carrier rate in new tab" onClick={() => onOpenVendorRatePlan?.(ledger.plan.ratePlanId)}>
                       <ArrowUpRight size={15} />
                     </IconButton>
                   </Tooltip>
@@ -1068,7 +1068,7 @@ function ShipmentPricingSection({ shipment, pricingResult, ratePlan, ratePlanOpt
               ) : (
                 <div className="ledger-rate-plan-control ledger-vendor-rate-plan-control is-view">
                   <span className="ledger-rate-plan-label">Carrier Rate</span>
-                  <button type="button" className="ledger-rate-plan-link" disabled={!ledger.plan?.ratePlanId} onClick={() => onOpenVendorRatePlan?.(ledger.plan.ratePlanId)}>
+                  <button type="button" className="ledger-rate-plan-link" aria-label={`Open ${ledger.plan?.name || "carrier rate"} in new tab`} disabled={!ledger.plan?.ratePlanId} onClick={() => onOpenVendorRatePlan?.(ledger.plan.ratePlanId)}>
                     <span>{ledger.plan?.name || "Carrier rate"}{ledger.plan?.version ? ` · v${ledger.plan.version}` : ""}</span><ArrowUpRight size={15} />
                   </button>
                 </div>
@@ -2305,6 +2305,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
   const modeOutputLabel = modeOutput.label;
   const modeOutputNumber = modeOutput.number === "Pending" ? "" : modeOutput.number;
   const isModeShipment = shipment.transportMode !== "TRUCKING";
+  const bolContentsLabel = `${bolDocuments.length} consignee ${bolDocuments.length === 1 ? "BOL" : "BOLs"}`;
 
   return (
     <div className="document-workspace">
@@ -2366,7 +2367,7 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
         </div>
       </section>
       <section className="document-group" aria-labelledby="output-documents-heading">
-        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>{isModeShipment ? `${modeOutputLabel} output is prepared from the confirmed shipment details.` : "One BOL is prepared for each consignee stop."}</p></div><span>{`${isModeShipment ? 1 : bolDocuments.length} docs`}</span></div>
+        <div className="document-group-heading output-document-heading"><div><h2 id="output-documents-heading">Output</h2><p>{isModeShipment ? `${modeOutputLabel} output is prepared from the confirmed shipment details.` : "One PDF includes a BOL for each consignee stop."}</p></div><span>1 doc</span></div>
         <div className="source-document-table-scroll">
           <table className="source-document-table output-document-table">
             <colgroup><col className="output-document-column" /><col className="output-generated-at-column" /><col className="output-actions-column" /></colgroup>
@@ -2387,19 +2388,17 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
                     <IconButton className="source-document-preview-button" aria-label={`Preview ${modeOutputLabel} ${modeOutputNumber}`} onClick={() => onOpenBol(shipment.shipmentId, null, fieldValues)}><ArrowUpRight size={16} /></IconButton>
                   </Tooltip>
                 ) : <span className="table-empty">{EMPTY_VALUE}</span>}</td>
-              </tr> : bolDocuments.map((stop, stopIndex) => {
-                const stopLabel = `Consignee ${stopIndex + 1}`;
-                return <tr key={stop.stopId}>
+              </tr> : <tr>
                 <td>
                   {bolAvailable ? (
                     <div className="source-document-cell">
                       <FileOutput size={18} />
-                      <span><strong>Bill of Lading · {stopLabel}</strong><small>{stop.company} · {stop.cargoLines.length} cargo {stop.cargoLines.length === 1 ? "item" : "items"}</small></span>
+                      <span><strong>Bill of Lading</strong><small>{bolContentsLabel}</small></span>
                     </div>
                   ) : (
-                    <div className="source-document-cell output-document-pending" aria-label={`Bill of Lading for ${stopLabel} pending shipment submission`}>
+                    <div className="source-document-cell output-document-pending" aria-label="Bill of Lading PDF pending generation">
                       <FileOutput size={18} />
-                      <span><strong>Bill of Lading · {stopLabel}</strong><small>{stop.company} · Generated after shipment submission</small></span>
+                      <span><strong>Bill of Lading</strong><small>{bolContentsLabel} · Generate BOL to preview</small></span>
                     </div>
                   )}
                 </td>
@@ -2407,12 +2406,11 @@ function DocumentsTab({ shipment, editing, onOpenBol, sources, onAddSources, onR
                 <td>
                   {bolAvailable ? (
                     <Tooltip title="Preview BOL" placement="top">
-                      <IconButton className="source-document-preview-button" aria-label={`Preview Bill of Lading ${stop.bolNumber}`} onClick={() => onOpenBol(shipment.shipmentId, stop)}><ArrowUpRight size={16} /></IconButton>
+                      <IconButton className="source-document-preview-button" aria-label="Preview Bill of Lading PDF" onClick={() => onOpenBol(shipment.shipmentId)}><ArrowUpRight size={16} /></IconButton>
                     </Tooltip>
                   ) : null}
                 </td>
-              </tr>;
-              })}
+              </tr>}
             </tbody>
           </table>
         </div>
@@ -5079,9 +5077,9 @@ function BillingTable({ rows, billingType, onOpen, onOpenShipment, onExportCsv, 
                     <tbody>
                       {group.rows.map((row) => (
                         <tr key={row.billingId}>
-                          <td><button className="table-link" type="button" onClick={() => onOpenShipment(row.shipmentId)}>{row.shipmentId}<ArrowUpRight size={13} /></button></td>
+                          <td><button className="table-link" type="button" aria-label={`Open shipment ${row.shipmentId} in new tab`} onClick={() => onOpenShipment(row.shipmentId)}>{row.shipmentId}<ArrowUpRight size={13} /></button></td>
                           <td>{formatTransportMode(row.transportMode)}</td>
-                          <td><button className="billing-record-link" type="button" onClick={() => onOpen(row)}>{row.billingId}</button></td>
+                          <td><button className="billing-record-link" type="button" aria-label={`Open billing record ${row.billingId} in new tab`} onClick={() => onOpen(row)}>{row.billingId}</button></td>
                           <td>{row.billingDate ? formatDate(row.billingDate) : <span className="table-empty">{EMPTY_VALUE}</span>}</td>
                           <td className="is-numeric">{formatMoney(row.amount, row.currency) || <span className="table-empty">{EMPTY_VALUE}</span>}</td>
                         </tr>
@@ -5463,7 +5461,7 @@ function getReportChartModel(chartView, chartDimension, chartDateRange) {
   return { activeChart, visibleChartData, periodLabel, dimensionLabel: reportDimensionLabels[chartDimension] };
 }
 
-function ReportsPreview({ onOpenShipment, chartView, onChartViewChange, chartDimension, onChartDimensionChange, chartDateRange, onChartDateRangeChange }) {
+function ReportsPreview({ onOpenShipment, onOpenShipmentLink = onOpenShipment, chartView, onChartViewChange, chartDimension, onChartDimensionChange, chartDateRange, onChartDateRangeChange }) {
   const [chartLoading, setChartLoading] = useState(false);
   const chartTransitionTimer = useRef(null);
   const { activeChart, visibleChartData, periodLabel, dimensionLabel } = getReportChartModel(chartView, chartDimension, chartDateRange);
@@ -5500,7 +5498,7 @@ function ReportsPreview({ onOpenShipment, chartView, onChartViewChange, chartDim
       headerName: "Shipment No.",
       width: 140,
       renderCell: ({ row }) => (
-        <button className="table-link report-shipment-link" type="button" onClick={(event) => { event.stopPropagation(); onOpenShipment(row.shipmentId); }}>
+        <button className="table-link report-shipment-link" type="button" aria-label={`Open shipment ${row.shipmentId} in new tab`} onClick={(event) => { event.stopPropagation(); onOpenShipmentLink(row.shipmentId); }}>
           {row.shipmentId}<ArrowUpRight size={13} />
         </button>
       ),
@@ -5656,8 +5654,45 @@ function BillingExportPanel({ filters, onChange }) {
   );
 }
 
+function readLinkedAppView() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const view = params.get("view");
+  const id = params.get("id");
+  if (!id) return null;
+  if (view === "shipment") {
+    const module = params.get("module");
+    if (!isShipmentModuleKey(module)) return null;
+    return {
+      activeModule: module,
+      quotationTypeTab: "customer",
+      panel: { type: "shipment", id, startInEdit: false, initialDetailTab: params.get("tab") || "details" },
+    };
+  }
+  if (view === "quotation") {
+    return { activeModule: "quotations", quotationTypeTab: "customer", panel: { type: "quotation", id, startInEdit: false } };
+  }
+  if (view === "carrier-rate") {
+    return { activeModule: "quotations", quotationTypeTab: "carrier", panel: { type: "carrier-rate", id, startInEdit: false } };
+  }
+  return null;
+}
+
+function openLinkedAppView({ view, id, module, tab }) {
+  if (!id || typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("view", view);
+  url.searchParams.set("id", id);
+  if (module) url.searchParams.set("module", module);
+  if (tab) url.searchParams.set("tab", tab);
+  window.open(url.toString(), "_blank", "noopener,noreferrer");
+}
+
 function App() {
-  const [activeModule, setActiveModule] = useState("shipments-trucking");
+  const [initialLinkedView] = useState(readLinkedAppView);
+  const [activeModule, setActiveModule] = useState(initialLinkedView?.activeModule || "shipments-trucking");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [quotationFilters, setQuotationFilters] = useState({ customer: "", transportMode: "" });
@@ -5687,7 +5722,7 @@ function App() {
   const [carrierRatePlans, setCarrierRatePlans] = useState(baseCostRatePlans);
   const [pendingDeleteCarrierRateId, setPendingDeleteCarrierRateId] = useState(null);
   const [partners, setPartners] = useState(basePartners);
-  const [quotationTypeTab, setQuotationTypeTab] = useState("customer");
+  const [quotationTypeTab, setQuotationTypeTab] = useState(initialLinkedView?.quotationTypeTab || "customer");
   const [billingTypeTab, setBillingTypeTab] = useState("all");
   const [partnerDraft, setPartnerDraft] = useState(null);
   const [pendingDeletePartnerId, setPendingDeletePartnerId] = useState(null);
@@ -5707,7 +5742,7 @@ function App() {
   const [billingExportAnchorEl, setBillingExportAnchorEl] = useState(null);
   const [quotationCreateAnchorEl, setQuotationCreateAnchorEl] = useState(null);
   const [selectedRowsByModule, setSelectedRowsByModule] = useState({ shipments: [], quotations: [], billing: [] });
-  const [panel, setPanel] = useState(null);
+  const [panel, setPanel] = useState(initialLinkedView?.panel || null);
   const [returnFocusId, setReturnFocusId] = useState(null);
   const [reviewFilter, setReviewFilter] = useState("all");
   const [selectedIssueId, setSelectedIssueId] = useState(demoIssues[0].issueId);
@@ -5752,6 +5787,7 @@ function App() {
       : shipment.transportMode === "AIR"
         ? modeDetailValue(savedFields, shipment, "mode.master.destinationAirport")
         : "";
+    const outputDocumentGenerated = generatedOutputDocumentIds.includes(shipment.shipmentId);
     return {
       ...shipment,
       shipmentNumber,
@@ -5760,8 +5796,8 @@ function App() {
       route: routeOrigin || routeDestination ? `${routeOrigin || "Origin pending"} → ${routeDestination || "Destination pending"}` : shipment.route,
       status,
       listStatus,
-      outputDocumentGenerated: generatedOutputDocumentIds.includes(shipment.shipmentId),
-      bolNumber: shipment.transportMode === "TRUCKING" && isConfirmedShipmentStatus(listStatus) ? "BOL-DEMO-" + shipment.shipmentId.split("-").at(-1) : null,
+      outputDocumentGenerated,
+      bolNumber: shipment.transportMode === "TRUCKING" && outputDocumentGenerated ? "BOL-DEMO-" + shipment.shipmentId.split("-").at(-1) : null,
       reviewIssueCount: shipment.shipmentId === fixture.fixtureId ? unresolvedBlockingIssueCount : shipment.reviewIssueCount,
     };
   }), [committedShipmentIds, createdShipments, shipmentFieldValuesById, shipmentsPendingReview, unresolvedBlockingIssueCount, deletedShipmentIds, generatedOutputDocumentIds]);
@@ -5963,6 +5999,18 @@ function App() {
     setToast(null);
     window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
   };
+  const openShipmentLinkById = (shipmentId, { initialDetailTab = "details" } = {}) => {
+    const targetShipment = shipments.find((shipment) => shipment.shipmentId === shipmentId);
+    if (!targetShipment) return;
+    const targetModule = targetShipment.transportMode === "OCEAN"
+      ? "shipments-ocean"
+      : targetShipment.transportMode === "AIR"
+        ? "shipments-air"
+        : "shipments-trucking";
+    openLinkedAppView({ view: "shipment", id: shipmentId, module: targetModule, tab: initialDetailTab });
+  };
+  const openQuoteLinkById = (quoteId) => openLinkedAppView({ view: "quotation", id: quoteId });
+  const openCarrierRateLinkById = (ratePlanId) => openLinkedAppView({ view: "carrier-rate", id: ratePlanId });
   const openCreateQuotation = (type) => {
     setQuotationCreateAnchorEl(null);
     setQuotationTypeTab(type);
@@ -6594,8 +6642,8 @@ function App() {
           initialFieldValues={shipmentFieldValuesById[selectedShipment.shipmentId]}
           initialRateSelection={rateSelectionsByShipment[selectedShipment.shipmentId]}
           onRestoreIssueState={setIssueState}
-          onOpenQuote={openQuoteById}
-          onOpenCarrierRate={openCarrierRateById}
+          onOpenQuote={openQuoteLinkById}
+          onOpenCarrierRate={openCarrierRateLinkById}
           onOpenBol={openBolPreview}
           onExportBol={exportBol}
           manualAdjustments={manualAdjustmentsByShipment[selectedShipment.shipmentId] || { customer: [], vendor: [] }}
@@ -6812,8 +6860,8 @@ function App() {
                       : <BillingTable
                           rows={visibleRows}
                           billingType={billingTypeTab}
-                          onOpen={(record) => openShipmentById(record.shipmentId, { initialDetailTab: "billing" })}
-                          onOpenShipment={(shipmentId) => openShipmentById(shipmentId, { initialDetailTab: "billing" })}
+                          onOpen={(record) => openShipmentLinkById(record.shipmentId, { initialDetailTab: "billing" })}
+                          onOpenShipment={(shipmentId) => openShipmentLinkById(shipmentId, { initialDetailTab: "billing" })}
                           onExportCsv={exportBillingGroupCsv}
                           onExportPdf={exportBillingGroupPdf}
                           expandedGroupKeys={expandedBillingGroupKeys}
@@ -6851,7 +6899,7 @@ function App() {
                   {!isPartnerModule && activeModule !== "billing" ? <SelectInput label="Status" value={draftFilters.status === "all" ? "" : draftFilters.status} onChange={(event) => setDraftFilters((current) => ({ ...current, status: event.target.value || "all" }))} options={filterOptions.filter((option) => option.value !== "all").map((option) => ({ value: option.value, label: option.label }))} /> : null}
                 </SearchSheet>
               </>
-            ) : <ReportsPreview onOpenShipment={openShipmentById} chartView={reportChartView} onChartViewChange={setReportChartView} chartDimension={reportChartDimension} onChartDimensionChange={setReportChartDimension} chartDateRange={reportChartDateRange} onChartDateRangeChange={setReportChartDateRange} />}
+            ) : <ReportsPreview onOpenShipment={openShipmentById} onOpenShipmentLink={openShipmentLinkById} chartView={reportChartView} onChartViewChange={setReportChartView} chartDimension={reportChartDimension} onChartDimensionChange={setReportChartDimension} chartDateRange={reportChartDateRange} onChartDateRangeChange={setReportChartDateRange} />}
           </section>
         </>
       )}
