@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
 
 const appRoot = resolve(import.meta.dirname, "..");
 const prototypeRoot = resolve(appRoot, "..");
@@ -89,6 +89,7 @@ if (checkOnly) {
   assert.equal(await readFile(manifestPath, "utf8"), manifestOutput, "Manifest is stale; run npm run sync:demo-artifacts");
   console.log("Generated demo artifacts match the canonical fixture.");
 } else {
+  await mkdir(dirname(manifestPath), { recursive: true });
   await writeFile(publishedFixturePath, fixtureOutput);
   await writeFile(manifestPath, manifestOutput);
   console.log("Published fixture and manifest generated from src/fixture.json.");
