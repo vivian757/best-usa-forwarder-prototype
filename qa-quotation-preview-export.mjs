@@ -31,6 +31,11 @@ try {
   await dialog.getByText("3 rates", { exact: true }).waitFor();
   await dialog.getByText("Additional delivery stop", { exact: true }).waitFor();
   await dialog.getByText("Detention", { exact: true }).waitFor();
+  const pricingSchedule = dialog.getByRole("table");
+  assert.deepEqual(await pricingSchedule.getByRole("columnheader").allTextContents(), ["Description", "Applies to", "Rule Type", "Unit", "Rate"]);
+  await pricingSchedule.getByText("Stop", { exact: true }).waitFor();
+  await pricingSchedule.getByText("30 min", { exact: true }).waitFor();
+  await pricingSchedule.getByText("Each delivery stop after the first", { exact: true }).waitFor();
   assert.equal(await dialog.getByText("Q-DEMO-001", { exact: false }).count(), 0, "Quotation export uses the Prototype rate-plan identity");
   assert.equal(await dialog.getByRole("button", { name: "Export PDF", exact: true }).count(), 1, "Quotation preview exposes one PDF export action");
   assert.equal(await dialog.getByText("Invoice", { exact: false }).count(), 0, "Quotation preview is not presented as an invoice");

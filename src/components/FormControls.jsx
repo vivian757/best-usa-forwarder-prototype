@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
-import { Autocomplete, Box, FormControl, FormControlLabel, FormHelperText, MenuItem, OutlinedInput, Radio, RadioGroup, Select, TextField, Typography } from "@mui/material";
+import { Autocomplete, Box, ButtonBase, FormControl, FormControlLabel, FormHelperText, IconButton, InputAdornment, MenuItem, OutlinedInput, Popover, Radio, RadioGroup, Select, TextField, Tooltip, Typography } from "@mui/material";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { semanticColors } from "../theme";
 
 export function FieldLabel({ children, required = false, htmlFor, id }) {
@@ -125,7 +126,167 @@ function parseEnglishTime(value = "") {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function EnglishTimeInput({ label, value, onChange, ariaLabel }) {
+const englishMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const englishMonthFullNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const englishWeekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function formatEnglishDate(value = "") {
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return "";
+  const monthIndex = Number(match[2]) - 1;
+  if (monthIndex < 0 || monthIndex > 11) return "";
+  return `${englishMonthNames[monthIndex]} ${Number(match[3])}, ${match[1]}`;
+}
+
+function parseEnglishDate(value = "") {
+  const normalized = String(value).trim();
+  const isoMatch = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const numericMatch = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const monthMatch = normalized.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(\d{4})$/);
+  let year;
+  let month;
+  let day;
+  if (isoMatch) {
+    [, year, month, day] = isoMatch;
+  } else if (numericMatch) {
+    [, month, day, year] = numericMatch;
+  } else if (monthMatch) {
+    const monthIndex = englishMonthNames.findIndex((name) => monthMatch[1].toLowerCase().startsWith(name.toLowerCase()));
+    if (monthIndex < 0) return null;
+    year = monthMatch[3];
+    month = String(monthIndex + 1);
+    day = monthMatch[2];
+  } else {
+    return null;
+  }
+  const isoValue = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const candidate = new Date(`${isoValue}T00:00:00Z`);
+  if (Number.isNaN(candidate.getTime()) || candidate.toISOString().slice(0, 10) !== isoValue) return null;
+  return isoValue;
+}
+
+export function EnglishDateInput({ label, value = "", onChange, required = false, error = false, helperText, min, max, ariaLabel, sx }) {
+  const generatedId = useId();
+  const inputId = generatedId;
+  const [pickerAnchorEl, setPickerAnchorEl] = useState(null);
+  const [calendarMonth, setCalendarMonth] = useState(() => String(value || min || new Date().toISOString().slice(0, 10)).slice(0, 7));
+  const [draftValue, setDraftValue] = useState(() => formatEnglishDate(value));
+
+  useEffect(() => {
+    setDraftValue(formatEnglishDate(value));
+  }, [value]);
+
+  const commitValue = () => {
+    if (!draftValue.trim()) {
+      if (value) onChange?.({ target: { value: "" } });
+      return;
+    }
+    const parsedValue = parseEnglishDate(draftValue);
+    if (!parsedValue || (min && parsedValue < min) || (max && parsedValue > max)) {
+      setDraftValue(formatEnglishDate(value));
+      return;
+    }
+    setDraftValue(formatEnglishDate(parsedValue));
+    if (parsedValue !== value) onChange?.({ target: { value: parsedValue } });
+  };
+
+  const openPicker = (event) => {
+    setCalendarMonth(String(value || min || new Date().toISOString().slice(0, 10)).slice(0, 7));
+    setPickerAnchorEl(event.currentTarget);
+  };
+  const [calendarYear, calendarMonthNumber] = calendarMonth.split("-").map(Number);
+  const firstWeekday = new Date(Date.UTC(calendarYear, calendarMonthNumber - 1, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(calendarYear, calendarMonthNumber, 0)).getUTCDate();
+  const calendarCells = [
+    ...Array.from({ length: firstWeekday }, (_, index) => ({ key: `blank-${index}` })),
+    ...Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      const dateValue = `${calendarMonth}-${String(day).padStart(2, "0")}`;
+      return { key: dateValue, day, dateValue };
+    }),
+  ];
+  const changeCalendarMonth = (amount) => {
+    const nextMonth = new Date(Date.UTC(calendarYear, calendarMonthNumber - 1 + amount, 1));
+    setCalendarMonth(`${nextMonth.getUTCFullYear()}-${String(nextMonth.getUTCMonth() + 1).padStart(2, "0")}`);
+  };
+
+  return (
+    <Box className="best-form-control english-date-input" sx={{ position: "relative", ...sx }}>
+      {label ? <FieldLabel required={required} htmlFor={inputId}>{label}</FieldLabel> : null}
+      <OutlinedInput
+        id={inputId}
+        fullWidth
+        type="text"
+        inputMode="text"
+        autoComplete="off"
+        required={required}
+        error={error}
+        placeholder="MMM D, YYYY"
+        value={draftValue}
+        endAdornment={(
+          <InputAdornment position="end">
+            <Tooltip title="Choose date">
+              <IconButton aria-label={ariaLabel ? `Choose ${ariaLabel.toLowerCase()}` : "Choose date"} aria-haspopup="dialog" aria-expanded={Boolean(pickerAnchorEl)} edge="end" size="small" onClick={openPicker}>
+                <CalendarDays size={18} />
+              </IconButton>
+            </Tooltip>
+          </InputAdornment>
+        )}
+        slotProps={{ input: { "aria-label": ariaLabel, spellCheck: false } }}
+        onChange={(event) => setDraftValue(event.target.value)}
+        onBlur={commitValue}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.target.blur();
+          if (event.key === "Escape") {
+            setDraftValue(formatEnglishDate(value));
+            event.target.blur();
+          }
+        }}
+        sx={{
+          ...fieldOutlineSx,
+          minHeight: 40,
+          "& .MuiOutlinedInput-input": { boxSizing: "border-box", height: 40, p: "10px 12px", fontSize: 14, lineHeight: "20px" },
+        }}
+      />
+      <Popover
+        open={Boolean(pickerAnchorEl)}
+        anchorEl={pickerAnchorEl}
+        onClose={() => setPickerAnchorEl(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        slotProps={{ paper: { role: "dialog", "aria-label": ariaLabel ? `Choose ${ariaLabel.toLowerCase()}` : "Choose date", sx: { mt: .75, p: 1.5, width: 288, borderRadius: 2, boxShadow: "0 8px 24px rgba(23, 36, 46, .14)" } } }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 700 }}>{englishMonthFullNames[calendarMonthNumber - 1]} {calendarYear}</Typography>
+          <Box sx={{ display: "flex", gap: .5 }}>
+            <IconButton aria-label="Previous month" size="small" onClick={() => changeCalendarMonth(-1)}><ChevronLeft size={17} /></IconButton>
+            <IconButton aria-label="Next month" size="small" onClick={() => changeCalendarMonth(1)}><ChevronRight size={17} /></IconButton>
+          </Box>
+        </Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: .25 }}>
+          {englishWeekdayNames.map((weekday) => <Typography key={weekday} component="span" sx={{ py: .5, textAlign: "center", color: "text.secondary", fontSize: 11, fontWeight: 600 }}>{weekday}</Typography>)}
+          {calendarCells.map((cell) => cell.dateValue ? (
+            <ButtonBase
+              key={cell.key}
+              aria-label={`${englishMonthFullNames[calendarMonthNumber - 1]} ${cell.day}, ${calendarYear}`}
+              disabled={Boolean((min && cell.dateValue < min) || (max && cell.dateValue > max))}
+              onClick={() => {
+                onChange?.({ target: { value: cell.dateValue } });
+                setPickerAnchorEl(null);
+              }}
+              sx={{ width: 36, height: 36, justifySelf: "center", borderRadius: "50%", fontSize: 13, fontVariantNumeric: "tabular-nums", color: cell.dateValue === value ? "primary.contrastText" : "text.primary", backgroundColor: cell.dateValue === value ? "primary.main" : "transparent", "&:hover": { backgroundColor: cell.dateValue === value ? "primary.dark" : "primary.100" }, "&.Mui-disabled": { color: "text.disabled" } }}
+            >
+              {cell.day}
+            </ButtonBase>
+          ) : <Box key={cell.key} aria-hidden="true" />)}
+        </Box>
+      </Popover>
+      {helperText ? <FormHelperText error={error} sx={{ minHeight: 16, mx: 0, mt: .75 }}>{helperText}</FormHelperText> : null}
+    </Box>
+  );
+}
+
+function EnglishTimeInput({ label, value, onChange, ariaLabel, error = false }) {
   const [draftValue, setDraftValue] = useState(() => formatEnglishTime(value));
 
   useEffect(() => {
@@ -146,6 +307,7 @@ function EnglishTimeInput({ label, value, onChange, ariaLabel }) {
     <OutlinedInput
       fullWidth
       type="text"
+      error={error}
       inputMode="text"
       autoComplete="off"
       placeholder={label}
@@ -166,6 +328,29 @@ function EnglishTimeInput({ label, value, onChange, ariaLabel }) {
         "& .MuiOutlinedInput-input": { boxSizing: "border-box", height: 40, p: "10px 12px", fontSize: 14, lineHeight: "20px" },
       }}
     />
+  );
+}
+
+export function EnglishDateTimeInput({ label, value = "", onChange, required = false, error = false, helperText, ariaLabel, sx }) {
+  const generatedId = useId();
+  const labelId = `${generatedId}-label`;
+  const dateValue = String(value).match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || "";
+  const timeValue = String(value).match(/T(\d{2}:\d{2})/)?.[1] || "";
+  const updatePart = ({ date = dateValue, time = timeValue }) => {
+    if (!date && !time) onChange?.("");
+    else if (!date) onChange?.(`T${time}`);
+    else if (!time) onChange?.(`${date}T`);
+    else onChange?.(`${date}T${time}`);
+  };
+  return (
+    <Box className="best-form-control english-date-time-input" sx={sx}>
+      {label ? <FieldLabel id={labelId} required={required}>{label}</FieldLabel> : null}
+      <Box role="group" aria-labelledby={label ? labelId : undefined} aria-label={label ? undefined : ariaLabel || "Date and time"} sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1.35fr) minmax(112px, .8fr)", gap: 1 }}>
+        <EnglishDateInput value={dateValue} onChange={(event) => updatePart({ date: event.target.value })} ariaLabel={`${ariaLabel || label || "Date and time"} date`} />
+        <EnglishTimeInput label="Time" value={timeValue} onChange={(event) => updatePart({ time: event.target.value })} ariaLabel={`${ariaLabel || label || "Date and time"} time`} error={error} />
+      </Box>
+      {helperText ? <FormHelperText error={error} sx={{ minHeight: 16, mx: 0, mt: .75 }}>{helperText}</FormHelperText> : null}
+    </Box>
   );
 }
 
@@ -233,6 +418,14 @@ export function AutocompleteInput({
           <TextField
             {...params}
             id={inputId}
+            slotProps={{
+              ...params.slotProps,
+              htmlInput: {
+                ...params.slotProps?.htmlInput,
+                id: inputId,
+                "aria-label": label || params.slotProps?.htmlInput?.["aria-label"],
+              },
+            }}
             required={required}
             error={error}
             placeholder={resolvedValue && !multiple ? "" : placeholder}
@@ -263,6 +456,7 @@ export function SelectInput({ label, required = false, error = false, warning = 
       <Select
         {...props}
         id={inputId}
+        aria-label={label || props["aria-label"]}
         value={value}
         error={error}
         fullWidth

@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "prebuild": "npm run sync:demo-artifacts",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "sync:demo-artifacts": "node scripts/sync-demo-artifacts.mjs",
+    "qa:artifacts": "node scripts/sync-demo-artifacts.mjs --check",
     "qa:demo-data": "node qa-demo-data-consistency.mjs",
+    "qa:domain": "node qa-domain-contract.mjs",
     "qa:current-demo": "node qa-current-demo-flow.mjs"
   },
   "dependencies": {

@@ -38,7 +38,7 @@ try {
 
   await oceanQuoteRow.click();
   await page.getByRole("heading", { name: "2026 Retail Pacific FCL", exact: true }).waitFor();
-  await page.getByText("Applies to Ocean shipments for Demo Retail Distribution LLC", { exact: true }).waitFor();
+await page.getByText("Applies to Import · Ocean · FCL shipments for Demo Retail Distribution LLC", { exact: true }).waitFor();
   await page.getByRole("region", { name: "Retail Pacific FCL details" }).getByText("Ocean", { exact: true }).waitFor();
   assert.equal(await page.getByText("Shanghai, CN → Oakland, CA", { exact: true }).count(), 0, "Customer Quote is limited by transport mode, not route");
   await page.getByText("Ocean fuel surcharge", { exact: true }).waitFor();
@@ -47,14 +47,14 @@ try {
   assert.equal(await page.getByText("No matching Customer Quote", { exact: true }).count(), 0, "Ocean pricing no longer uses the unmatched quote example");
   await page.getByRole("button", { name: "Open 2026 Retail Pacific FCL version 2 in new tab", exact: true }).waitFor();
   await page.getByRole("button", { name: "Open Demo Ocean Line FCL Cost 2026 in new tab", exact: true }).waitFor();
-  await page.getByText("Base ocean freight", { exact: true }).waitFor();
+  await page.getByText("Base FCL freight", { exact: true }).waitFor();
   await page.getByText("Documentation fee", { exact: true }).waitFor();
 
   await openShipmentPricing(page, "Air", "AIR-DEMO-002");
   assert.equal(await page.getByText("No matching Customer Quote", { exact: true }).count(), 0, "Air pricing no longer uses the unmatched quote example");
   await page.getByRole("button", { name: "Open 2026 Home Supply Air Freight version 1 in new tab", exact: true }).waitFor();
   await page.getByRole("button", { name: "Open Demo Pacific Air Cargo Cost 2026 in new tab", exact: true }).waitFor();
-  await page.getByText("Base air freight", { exact: true }).waitFor();
+  await page.getByText("Base Air Freight", { exact: true }).waitFor();
   await page.getByText("Security screening", { exact: true }).waitFor();
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();

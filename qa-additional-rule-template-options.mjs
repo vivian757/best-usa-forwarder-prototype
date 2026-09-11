@@ -12,18 +12,29 @@ try {
   await page.getByRole("button", { name: "Create", exact: true }).click();
   await page.getByRole("menuitem", { name: "Customer Quote", exact: true }).click();
   await page.getByRole("heading", { name: "Create Customer Quote", exact: true }).waitFor();
-  await page.getByRole("table", { name: "Surcharge rules", exact: true }).getByRole("columnheader", { name: "Rate", exact: true }).waitFor();
+  await page.getByRole("table", { name: "Customer additional pricing rules", exact: true }).getByRole("columnheader", { name: "Rate", exact: true }).waitFor();
   await page.getByRole("button", { name: "Add rule", exact: true }).last().click();
 
-  const ruleTemplate = page.getByRole("combobox", { name: "Additional rule 1 rule template", exact: true });
-  assert.equal(await ruleTemplate.textContent(), "Per unit", "New additional rules default to Per unit");
-  await ruleTemplate.click();
-  const options = (await page.getByRole("option").allInnerTexts()).filter((option) => option !== "Select rule template");
-  assert.deepEqual(options, ["Flat rate", "Per unit", "Percentage surcharge", "Threshold + time"], "Additional rule templates are restored");
+  const ruleTypeControl = page.getByRole("combobox", { name: "Additional rule 1 rule type", exact: true });
+  assert.equal(await ruleTypeControl.textContent(), "Per unit", "New additional rules default to Per unit");
+  await ruleTypeControl.click();
+  const options = (await page.getByRole("option").allInnerTexts()).filter((option) => option !== "Select rule type");
+  assert.deepEqual(options, ["Flat rate", "Per unit", "Percentage surcharge", "Threshold + time"], "Additional rule types are restored");
   await page.getByRole("option", { name: "Percentage surcharge", exact: true }).click();
   await page.getByText("Percentage rate · %", { exact: true }).waitFor();
+  const unit = page.getByRole("combobox", { name: "Additional rule 1 unit", exact: true });
+  const condition = page.getByRole("combobox", { name: "Additional rule 1 condition", exact: true });
+  assert.equal((await unit.textContent()).trim(), "Charge subtotal");
+  await ruleTypeControl.click();
+  await page.getByRole("option", { name: "Threshold + time", exact: true }).click();
+  assert.equal((await unit.textContent()).trim(), "30 min");
+  assert.equal((await condition.textContent()).trim(), "After 30 free min");
+  await ruleTypeControl.click();
+  await page.getByRole("option", { name: "Per unit", exact: true }).click();
+  assert.equal((await unit.textContent()).trim(), "Shipment");
+  assert.equal((await condition.textContent()).trim(), "All shipments");
 
-  console.log("Additional rule template options QA passed.");
+  console.log("Additional rule type options QA passed.");
   await context.close();
 } finally {
   await browser.close();

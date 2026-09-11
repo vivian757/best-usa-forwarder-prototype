@@ -27,7 +27,7 @@ try {
   await combinedRow.click();
 
   await page.getByRole("heading", { name: "2026 Retail West Logistics", exact: true }).waitFor();
-  await page.getByRole("table", { name: "Customer rate matrix" }).waitFor();
+  await page.getByRole("table", { name: "Customer base pricing rules" }).waitFor();
   const warehouseTable = page.getByRole("table", { name: "Warehouse service items" });
   await warehouseTable.waitFor();
   assert.deepEqual(
@@ -41,8 +41,8 @@ try {
   assert.doesNotMatch(await page.locator(".warehouse-service-total").textContent(), /warehouse/i);
   assert.equal(await page.locator(".warehouse-service-table > .warehouse-service-total").count(), 1, "Warehouse total uses the existing table total-row pattern");
   await page.getByText("Version 3", { exact: true }).waitFor();
-  assert.equal(await page.getByRole("table", { name: "Customer rate matrix" }).getByRole("columnheader", { name: "Rate", exact: true }).count(), 1);
-  assert.equal(await page.getByRole("table", { name: "Surcharge rules" }).getByRole("columnheader", { name: "Rate", exact: true }).count(), 1);
+  assert.equal(await page.getByRole("table", { name: "Customer base pricing rules" }).getByRole("columnheader", { name: "Rate", exact: true }).count(), 1);
+  assert.equal(await page.getByRole("table", { name: "Customer additional pricing rules" }).getByRole("columnheader", { name: "Rate", exact: true }).count(), 1);
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   assert.equal(await page.locator(".rate-plan-edit-grid .MuiAutocomplete-tag").count(), 2, "Service scope renders as two selected options");
   const serviceScopeControl = page.locator(".rate-plan-edit-grid .best-form-control").filter({ hasText: "Service scope" });

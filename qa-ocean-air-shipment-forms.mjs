@@ -52,9 +52,9 @@ try {
   assert.equal(await page.getByLabel("MB/L No.", { exact: true }).getAttribute("placeholder"), "-", "Ocean empty text fields use the shared dash placeholder");
   assert.equal(await page.locator('input[placeholder="Not available yet"]').count(), 0, "Ocean create has no legacy empty-value placeholder");
   await page.screenshot({ path: "/private/tmp/best-usa-ocean-no-system-summary.png", fullPage: false });
-  assert.equal(await page.getByLabel("ETD", { exact: true }).getAttribute("placeholder"), "MM/DD/YYYY", "Ocean ETD uses an English date placeholder");
-  assert.equal(await page.getByLabel("ETA", { exact: true }).getAttribute("placeholder"), "MM/DD/YYYY", "Ocean ETA uses an English date placeholder");
-  assert.equal(await page.getByLabel("Place of Delivery ETA", { exact: true }).getAttribute("placeholder"), "MM/DD/YYYY", "Ocean delivery ETA uses an English date placeholder");
+  assert.equal(await page.getByLabel("ETD", { exact: true }).getAttribute("placeholder"), "MMM D, YYYY", "Ocean ETD uses an English date picker");
+  assert.equal(await page.getByLabel("ETA", { exact: true }).getAttribute("placeholder"), "MMM D, YYYY", "Ocean ETA uses an English date picker");
+  assert.equal(await page.getByLabel("Place of Delivery ETA", { exact: true }).getAttribute("placeholder"), "MMM D, YYYY", "Ocean delivery ETA uses an English date picker");
   const addContainerButton = page.getByRole("button", { name: "Add container", exact: true });
   await addContainerButton.waitFor();
   const containerTableBox = await page.locator("#mode-section-cargo .mode-line-table-scroll").boundingBox();
@@ -116,9 +116,9 @@ try {
   await page.getByLabel("MAWB No.", { exact: true }).waitFor();
   assert.equal(await page.getByLabel("MAWB No.", { exact: true }).getAttribute("placeholder"), "-", "Air empty text fields use the shared dash placeholder");
   assert.equal(await page.locator('input[placeholder="Not available yet"]').count(), 0, "Air create has no legacy empty-value placeholder");
-  assert.equal(await page.getByLabel("ETD", { exact: true }).getAttribute("placeholder"), "MM/DD/YYYY HH:MM", "Air ETD uses an English date-time placeholder");
-  assert.equal(await page.getByLabel("ETA", { exact: true }).getAttribute("placeholder"), "MM/DD/YYYY HH:MM", "Air ETA uses an English date-time placeholder");
-  assert.equal(await page.getByLabel("Arrival Date / Time", { exact: true }).getAttribute("placeholder"), "MM/DD/YYYY HH:MM", "Air arrival uses an English date-time placeholder");
+  assert.equal(await page.getByLabel("ETD date", { exact: true }).getAttribute("placeholder"), "MMM D, YYYY", "Air ETD uses an English date-time picker");
+  assert.equal(await page.getByLabel("ETA date", { exact: true }).getAttribute("placeholder"), "MMM D, YYYY", "Air ETA uses an English date-time picker");
+  assert.equal(await page.getByText("Arrival Date / Time", { exact: true }).count(), 0, "Air does not duplicate master ETA in the House section");
   const addDimensionsButton = page.getByRole("button", { name: "Add dimensions", exact: true });
   await addDimensionsButton.waitFor();
   const dimensionsTableBox = await page.locator("#mode-section-dimensions .mode-line-table-scroll").boundingBox();

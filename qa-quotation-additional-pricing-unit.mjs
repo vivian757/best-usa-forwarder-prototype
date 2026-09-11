@@ -15,17 +15,21 @@ try {
   await page.locator('.MuiDataGrid-row[data-id="RATE-DEMO-001"] [data-field="name"]').click();
   await page.getByRole("heading", { name: "2026 Retail California FTL", exact: true }).waitFor();
 
-  const baseTable = page.getByRole("table", { name: "Customer rate matrix" });
-  assert.deepEqual(await baseTable.getByRole("columnheader").allTextContents(), ["Rule template", "Equipment Type", "Configuration", "Rate"]);
-  assert.equal((await baseTable.getByRole("row").nth(1).getByRole("cell").nth(1).innerText()).trim(), "Van / Dry Van (V)");
-  assert.equal(await baseTable.getByRole("row").nth(1).getByRole("cell").first().evaluate((element) => getComputedStyle(element).fontWeight), "400", "Base rule template uses regular weight");
+  const baseTable = page.getByRole("table", { name: "Customer base pricing rules" });
+  assert.deepEqual(await baseTable.getByRole("columnheader").allTextContents(), ["Fee item", "Applies to", "Rule Type", "Unit", "Rate"]);
+  assert.equal(await baseTable.locator(".rate-rule-head > [role='columnheader']").count(), 5, "Pricing table has no empty action header column");
+  assert.equal((await baseTable.getByRole("row").nth(1).getByRole("cell").first().innerText()).trim(), "Base FTL freight");
+  assert.equal((await baseTable.getByRole("row").nth(1).getByRole("cell").nth(1).innerText()).trim(), "Van / Dry Van (V)\nFTL shipments");
+  assert.equal(await baseTable.getByRole("row").nth(1).getByRole("cell").nth(2).evaluate((element) => getComputedStyle(element).fontWeight), "400", "Base rule type uses regular weight");
 
-  const table = page.getByRole("table", { name: "Surcharge rules" });
-  assert.deepEqual(await table.getByRole("columnheader").allTextContents(), ["Fee item", "Rule template", "Unit", "Rate"]);
-  assert.equal(await table.getByRole("columnheader", { name: "Applies when", exact: true }).count(), 0);
-  assert.equal((await table.getByRole("row").nth(1).getByRole("cell").nth(1).innerText()).trim(), "Per unit");
-  assert.equal(await table.getByRole("row").nth(1).getByRole("cell").nth(1).evaluate((element) => getComputedStyle(element).fontWeight), "400", "Additional rule template uses regular weight");
-  assert.equal((await table.getByRole("row").nth(1).getByRole("cell").nth(2).innerText()).trim(), "Shipment");
+  const table = page.getByRole("table", { name: "Customer additional pricing rules" });
+  assert.deepEqual(await table.getByRole("columnheader").allTextContents(), ["Fee item", "Applies to", "Rule Type", "Unit", "Rate"]);
+  assert.equal((await table.getByRole("row").nth(1).getByRole("cell").nth(2).innerText()).trim(), "Per unit");
+  assert.equal(await table.getByRole("row").nth(1).getByRole("cell").nth(2).evaluate((element) => getComputedStyle(element).fontWeight), "400", "Additional rule type uses regular weight");
+  assert.equal((await table.getByRole("row").nth(1).getByRole("cell").nth(1).innerText()).trim(), "All equipment\nEach delivery stop after the first");
+  assert.equal((await table.getByRole("row").nth(1).getByRole("cell").nth(3).innerText()).trim(), "Stop");
+  assert.equal((await table.getByRole("row").nth(2).getByRole("cell").nth(2).innerText()).trim(), "Threshold + time");
+  assert.equal((await table.getByRole("row").nth(2).getByRole("cell").nth(3).innerText()).trim(), "30 min");
 
   const scopeAlert = page.getByText("Applies to Trucking shipments for Demo Retail Distribution LLC", { exact: true });
   await scopeAlert.waitFor();
@@ -38,25 +42,35 @@ try {
   await scopeAlert.waitFor();
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();
+  assert.equal(await baseTable.locator(".rate-rule-head > [role='columnheader']").count(), 6, "Editing exposes a dedicated action column instead of leaving unexplained Rate space");
+  const baseActionHeader = baseTable.getByRole("columnheader", { name: "Rule actions", exact: true });
+  const baseDeleteButton = page.getByRole("button", { name: "Delete base rule 1", exact: true });
+  const [baseActionHeaderBox, baseDeleteBox] = await Promise.all([baseActionHeader.boundingBox(), baseDeleteButton.boundingBox()]);
+  assert.ok(baseActionHeaderBox && baseDeleteBox && Math.abs((baseActionHeaderBox.x + baseActionHeaderBox.width / 2) - (baseDeleteBox.x + baseDeleteBox.width / 2)) < 2, "The action header aligns with its delete control");
+  assert.equal(await page.getByLabel("Base rule 1 fee item", { exact: true }).inputValue(), "Base FTL freight");
   assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Transport mode" }).count(), 1, "quotation scope keeps Transport mode");
-  assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Service Type" }).count(), 0, "quotation scope does not add Service Type");
-  const equipmentType = page.getByRole("combobox", { name: "Base rule 1 equipment type", exact: true });
+  assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Operation Direction" }).count(), 0, "quotation scope does not duplicate rule-level applicability");
+  assert.equal(await page.locator(".quotation-overview-card label").filter({ hasText: "Load Type" }).count(), 0, "Load Type is configured per pricing rule");
+  const equipmentType = page.getByRole("combobox", { name: "Base rule 1 equipment", exact: true });
   assert.equal((await equipmentType.innerText()).trim(), "Van / Dry Van (V)");
   await equipmentType.click();
   await page.getByRole("option", { name: "Reefer (R)", exact: true }).click();
   assert.equal((await equipmentType.innerText()).trim(), "Reefer (R)", "Equipment Type can be changed per base rule");
+  const conditionControl = page.getByRole("combobox", { name: "Base rule 1 condition", exact: true });
+  const [equipmentBox, conditionBox] = await Promise.all([equipmentType.boundingBox(), conditionControl.boundingBox()]);
+  assert.ok(equipmentBox && conditionBox && Math.abs(equipmentBox.y - conditionBox.y) < 2 && conditionBox.x < equipmentBox.x, "Shipment conditions appear before Equipment Type inside Applies to");
   await baseTable.screenshot({ path: "/tmp/quotation-equipment-type.png" });
-  const baseConfiguration = page.getByRole("combobox", { name: "Base rule 1 configuration", exact: true });
-  assert.equal((await baseConfiguration.innerText()).trim(), "Per truck", "FTL base configuration shows the per-truck pricing basis");
-  assert.equal(await page.getByRole("combobox", { name: "Base rule 1 tier", exact: true }).count(), 0);
-  assert.equal(await page.getByRole("combobox", { name: "Base rule 1 basis", exact: true }).count(), 0);
+  const baseUnit = page.getByRole("combobox", { name: "Base rule 1 unit", exact: true });
+  assert.equal((await baseUnit.innerText()).trim(), "Truck", "FTL base rule uses an explicit Truck unit");
+  assert.equal((await conditionControl.innerText()).trim(), "FTL shipments");
   const group = page.locator(".quotation-rule-group").filter({ has: page.getByRole("heading", { name: "Additional Pricing", exact: true }) });
   await group.getByRole("button", { name: "Add rule", exact: true }).click();
-  assert.equal((await page.getByRole("combobox", { name: "Additional rule 3 rule template", exact: true }).innerText()).trim(), "Per unit");
+  assert.equal((await page.getByRole("combobox", { name: "Additional rule 3 rule type", exact: true }).innerText()).trim(), "Per unit");
   assert.equal((await page.getByRole("combobox", { name: "Additional rule 3 unit", exact: true }).innerText()).trim(), "Shipment");
+  assert.equal((await page.getByRole("combobox", { name: "Additional rule 3 condition", exact: true }).innerText()).trim(), "All shipments");
   await page.screenshot({ path: "/tmp/quotation-additional-pricing-unit.png", fullPage: true });
 
-  console.log(JSON.stringify({ baseHeaders: ["Rule template", "Equipment Type", "Configuration", "Rate"], equipmentType: "Reefer (R)", quotationScope: "Transport mode only", additionalHeaders: ["Fee item", "Rule template", "Unit", "Rate"], defaultTemplate: "Per unit", defaultUnit: "Shipment", simplifiedBaseConfiguration: true }));
+  console.log(JSON.stringify({ sharedHeaders: ["Fee item", "Applies to", "Rule Type", "Unit", "Rate"], baseFeeItem: "Base FTL freight", equipmentType: "Reefer (R)", quotationScope: "Trucking", defaultRuleType: "Per unit", defaultUnit: "Shipment", structuredConditions: true }));
 } finally {
   await browser.close();
 }

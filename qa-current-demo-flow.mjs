@@ -4,7 +4,12 @@ import { resolve } from "node:path";
 const appRoot = resolve(import.meta.dirname);
 const url = process.argv[2] || process.env.PROTOTYPE_URL || "http://127.0.0.1:5178/";
 const checks = [
+  ["scripts/sync-demo-artifacts.mjs", "--check"],
   ["qa-demo-data-consistency.mjs"],
+  ["qa-domain-contract.mjs"],
+  ["qa-shipment-operation-direction.mjs", url],
+  ["qa-shipment-commercial-ownership.mjs", url],
+  ["qa-field-format-consistency.mjs", url],
   ["qa-extracted-equipment-type.mjs", url],
   ["qa-quotation-additional-pricing-unit.mjs", url],
   ["qa-quotation-preview-export.mjs", url],

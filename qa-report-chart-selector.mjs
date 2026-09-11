@@ -81,7 +81,7 @@ try {
   await chartCard.getByText("Retail Dist.", { exact: true }).waitFor();
 
   for (const dimension of [
-    { option: "Service type", heading: "Gross profit by service type", groups: 3 },
+    { option: "Load type", heading: "Gross profit by load type", groups: 3 },
     { option: "Route", heading: "Gross profit by route", groups: 4 },
     { option: "Customer", heading: "Gross profit by customer", groups: 4 },
   ]) {

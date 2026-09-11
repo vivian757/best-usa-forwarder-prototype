@@ -6,6 +6,8 @@
   "representativeCase": {
     "status": "pending_confirmation",
     "transportMode": "TRUCKING",
+    "operationDirection": "DOMESTIC",
+    "loadType": "FTL",
     "serviceType": "FTL",
     "stopPattern": "single_pickup_multi_delivery",
     "primaryUser": "BEST USA Operations",
@@ -23,10 +25,22 @@
       "preview": {
         "kind": "email",
         "headers": [
-          ["From", "Jordan Lee <jordan.lee@example.com>"],
-          ["To", "BEST USA Operations <ops-demo@example.com>"],
-          ["Date", "Mon, 07 Sep 2026 09:12:00 -0700"],
-          ["Subject", "FTL multi-stop pickup request - PO-DEMO-260914 - Sep 14"]
+          [
+            "From",
+            "Jordan Lee <jordan.lee@example.com>"
+          ],
+          [
+            "To",
+            "BEST USA Operations <ops-demo@example.com>"
+          ],
+          [
+            "Date",
+            "Mon, 07 Sep 2026 09:12:00 -0700"
+          ],
+          [
+            "Subject",
+            "FTL multi-stop pickup request - PO-DEMO-260914 - Sep 14"
+          ]
         ],
         "body": [
           "Hi Operations,",
@@ -63,12 +77,62 @@
       "preview": {
         "kind": "spreadsheet",
         "sheetName": "Cargo Details",
-        "headers": ["Line ID", "Delivery Stop ID", "H/U Type", "H/U Count", "Package Type", "Piece Count", "Commodity Description", "Total Weight (lb)", "Dimensions (in)", "Freight Class", "NMFC", "Stackable", "Turnable", "Hazmat"],
-        "rows": [
-          ["CARGO-001", "STOP-DEMO-002", "Pallet", "8", "Carton", "120", "Consumer electronic accessories", "2450", "48 x 40 x 48", "70", "", "Yes", "No", "No"],
-          ["CARGO-002", "STOP-DEMO-003", "Pallet", "4", "Carton", "48", "Medical device accessories", "1500", "48 x 40 x 42", "85", "184140", "No", "No", "No"]
+        "headers": [
+          "Line ID",
+          "Delivery Stop ID",
+          "H/U Type",
+          "H/U Count",
+          "Package Type",
+          "Piece Count",
+          "Commodity Description",
+          "Total Weight (lb)",
+          "Dimensions (in)",
+          "Freight Class",
+          "NMFC",
+          "Stackable",
+          "Turnable",
+          "Hazmat"
         ],
-        "summary": ["Total Handling Units: 12 pallets", "Total Packages / Pieces: 168 cartons", "Shipment Total Weight: 3,950 lb", "Cargo is allocated to two delivery stops."]
+        "rows": [
+          [
+            "CARGO-001",
+            "STOP-DEMO-002",
+            "Pallet",
+            "8",
+            "Carton",
+            "120",
+            "Consumer electronic accessories",
+            "2450",
+            "48 x 40 x 48",
+            "70",
+            "",
+            "Yes",
+            "No",
+            "No"
+          ],
+          [
+            "CARGO-002",
+            "STOP-DEMO-003",
+            "Pallet",
+            "4",
+            "Carton",
+            "48",
+            "Medical device accessories",
+            "1500",
+            "48 x 40 x 42",
+            "85",
+            "184140",
+            "No",
+            "No",
+            "No"
+          ]
+        ],
+        "summary": [
+          "Total Handling Units: 12 pallets",
+          "Total Packages / Pieces: 168 cartons",
+          "Shipment Total Weight: 3,950 lb",
+          "Cargo is allocated to two delivery stops."
+        ]
       },
       "summary": "提供兩筆 Cargo 明細、168 cartons、3,950 lb 與 12 pallets，並指派至兩個 Delivery Stop。"
     }
@@ -78,6 +142,8 @@
       "jobId": "TRK-DEMO-001",
       "status": "in_review",
       "transportMode": "TRUCKING",
+      "operationDirection": "DOMESTIC",
+      "loadType": "FTL",
       "serviceType": "FTL",
       "owner": "Demo Ops User",
       "mockExtraction": true
@@ -121,24 +187,45 @@
         "activity": "Pickup",
         "company": "BEST USA · Livermore Station",
         "address": "1000 Demo Commerce Drive, Livermore, CA 94551",
-        "contact": "Station Operations · +1 925-555-0101",
-        "timeWindow": "2026/09/14 · 9:00 AM–12:00 PM PDT"
+        "contact": {
+          "name": "Station Operations",
+          "phone": "+1 925-555-0101"
+        },
+        "timeWindow": {
+          "startAt": "2026-09-14T09:00:00-07:00",
+          "endAt": "2026-09-14T12:00:00-07:00",
+          "timeZone": "America/Los_Angeles"
+        }
       },
       {
         "stopId": "STOP-DEMO-002",
         "activity": "Delivery",
         "company": "Demo Retail Distribution LLC",
         "address": "2000 Sample Distribution Avenue, Los Angeles, CA 90001",
-        "contact": "Jordan Lee · +1 213-555-0168",
-        "timeWindow": "2026/09/15 · 1:00–3:00 PM PDT"
+        "contact": {
+          "name": "Jordan Lee",
+          "phone": "+1 213-555-0168"
+        },
+        "timeWindow": {
+          "startAt": "2026-09-15T13:00:00-07:00",
+          "endAt": "2026-09-15T15:00:00-07:00",
+          "timeZone": "America/Los_Angeles"
+        }
       },
       {
         "stopId": "STOP-DEMO-003",
         "activity": "Delivery",
         "company": "Demo Medical Devices Corp.",
         "address": "4800 Harbor Commerce Way, Long Beach, CA 90810",
-        "contact": "Morgan Wu · +1 562-555-0134",
-        "timeWindow": "2026/09/15 · 3:30–5:30 PM PDT"
+        "contact": {
+          "name": "Morgan Wu",
+          "phone": "+1 562-555-0134"
+        },
+        "timeWindow": {
+          "startAt": "2026-09-15T15:30:00-07:00",
+          "endAt": "2026-09-15T17:30:00-07:00",
+          "timeZone": "America/Los_Angeles"
+        }
       }
     ],
     "cargoLines": [
@@ -240,52 +327,13 @@
       "proposedValue": null,
       "correctedValue": null,
       "prototypeQuestion": "Equipment Type 是否為 Shipment Commit 必填？由誰在何時補值？"
-    },
-    {
-      "issueId": "ISSUE-LOW-001",
-      "fieldPath": "shipper.timeWindow",
-      "issueType": "low_confidence",
-      "severity": "warning",
-      "resolutionStatus": "unresolved",
-      "sourceIds": [
-        "SRC-EMAIL-001",
-        "SRC-PDF-001"
-      ],
-      "sourceLocations": [
-        "Email body: Pickup after 9 AM",
-        "PDF page 1: Pickup Window"
-      ],
-      "confidence": 0.61,
-      "originalValue": "2026-09-14 09:00–12:00 PDT",
-      "proposedValue": "2026-09-14 09:00–12:00 PDT",
-      "correctedValue": null,
-      "prototypeQuestion": "Ops 是否需要看到 Confidence 數值，還是只需要 Low Confidence 狀態與來源對照？"
-    },
-    {
-      "issueId": "ISSUE-UNMAPPED-001",
-      "fieldPath": "instructions",
-      "issueType": "unmapped",
-      "severity": "warning",
-      "resolutionStatus": "unresolved",
-      "sourceIds": [
-        "SRC-EMAIL-001"
-      ],
-      "sourceLocations": [
-        "Email body: Additional charge approval"
-      ],
-      "originalValue": "Carrier must obtain approval before any additional charge over USD 150.",
-      "proposedValue": "Preserve in Instructions",
-      "correctedValue": null,
-      "prototypeQuestion": "費用核准指示保留於 Instructions 是否足夠，或需要獨立欄位與流程？"
     }
   ],
   "scenarioPresets": [
     {
       "presetId": "combined_demo",
       "issueIds": [
-        "ISSUE-MISSING-001",
-        "ISSUE-LOW-001",
-        "ISSUE-UNMAPPED-001"
+        "ISSUE-MISSING-001"
       ]
     },
     {
@@ -294,24 +342,6 @@
     },
     {
       "presetId": "missing_field",
-      "issueIds": [
-        "ISSUE-MISSING-001"
-      ]
-    },
-    {
-      "presetId": "low_confidence",
-      "issueIds": [
-        "ISSUE-LOW-001"
-      ]
-    },
-    {
-      "presetId": "unmapped_information",
-      "issueIds": [
-        "ISSUE-UNMAPPED-001"
-      ]
-    },
-    {
-      "presetId": "commit_blocked",
       "issueIds": [
         "ISSUE-MISSING-001"
       ]
@@ -342,7 +372,7 @@
         "route": "Livermore, CA → Los Angeles, CA → Long Beach, CA",
         "pickupDate": "2026-09-14",
         "status": "in_review",
-        "reviewIssueCount": 3,
+        "reviewIssueCount": 1,
         "quotationStatus": "accepted",
         "billingStatus": "draft",
         "lastUpdated": "2026-09-07T16:30:00+08:00"
@@ -359,6 +389,7 @@
         "reviewIssueCount": 0,
         "quotationStatus": "accepted",
         "billingStatus": "draft",
+        "bolNumber": "BOL-DEMO-002",
         "lastUpdated": "2026-09-06T11:20:00+08:00"
       },
       {
@@ -387,6 +418,7 @@
         "reviewIssueCount": 0,
         "quotationStatus": "accepted",
         "billingStatus": "ready",
+        "bolNumber": "BOL-DEMO-004",
         "lastUpdated": "2026-09-05T17:10:00+08:00"
       }
     ],
@@ -401,17 +433,70 @@
         "transportMode": "TRUCKING",
         "serviceType": "FTL",
         "serviceScope": "FTL · California multi-stop",
-        "serviceScopes": ["FTL · California multi-stop"],
+        "serviceScopes": [
+          "FTL · California multi-stop"
+        ],
         "createdAt": "2025-11-15T10:00:00-08:00",
         "effectiveFrom": "2026-01-01",
         "effectiveTo": "2026-12-31",
-        "shipmentIds": ["TRK-DEMO-001"],
+        "shipmentIds": [
+          "TRK-DEMO-001"
+        ],
         "rateMatrix": [
-          { "lane": "Livermore → Los Angeles → Long Beach", "equipmentType": "Van / Dry Van (V)", "tier": "Base charge", "basis": "Per truck", "rate": 2400 }
+          {
+            "name": "Base FTL freight",
+            "rateCategory": "base",
+            "lane": "Livermore → Los Angeles → Long Beach",
+            "equipmentType": "Van / Dry Van (V)",
+            "tier": "Base charge",
+            "basis": "Per truck",
+            "ruleType": "flat_rate",
+            "billingUnit": "TRUCK",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FTL"
+              }
+            ],
+            "rate": 2400
+          }
         ],
         "surchargeRules": [
-          { "code": "MULTI_STOP", "name": "Additional delivery stop", "trigger": "Per additional stop", "rate": 150, "unit": "flat" },
-          { "code": "DETENTION", "name": "Detention", "trigger": "After 30 free min", "rate": 200, "unit": "per 30 min" }
+          {
+            "code": "MULTI_STOP",
+            "name": "Additional delivery stop",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per additional stop",
+            "ruleType": "per_unit",
+            "billingUnit": "STOP",
+            "conditions": [
+              {
+                "field": "deliveryStopNumber",
+                "operator": "greaterThan",
+                "value": 1
+              }
+            ],
+            "rate": 150
+          },
+          {
+            "code": "DETENTION",
+            "name": "Detention",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "After 30 free min",
+            "ruleType": "threshold_time",
+            "billingUnit": "30_MIN",
+            "conditions": [
+              {
+                "field": "detentionMinutes",
+                "operator": "greaterThan",
+                "value": 30
+              }
+            ],
+            "rate": 200
+          }
         ],
         "lastUpdated": "2026-09-07T16:30:00+08:00"
       },
@@ -427,14 +512,84 @@
         "createdAt": "2025-12-02T14:30:00-08:00",
         "effectiveFrom": "2026-01-01",
         "effectiveTo": "2026-12-31",
-        "shipmentIds": ["TRK-DEMO-002"],
+        "shipmentIds": [
+          "TRK-DEMO-002"
+        ],
         "rateMatrix": [
-          { "lane": "Bay Area → San Diego", "equipmentType": "Van / Dry Van (V)", "tier": "0–3,000 lb", "basis": "Billable weight", "rate": 1050 },
-          { "lane": "Bay Area → San Diego", "equipmentType": "Van / Dry Van (V)", "tier": "3,001–6,000 lb", "basis": "Billable weight", "rate": 1440 }
+          {
+            "name": "Base LTL freight",
+            "rateCategory": "base",
+            "lane": "Bay Area → San Diego",
+            "equipmentType": "Van / Dry Van (V)",
+            "tier": "0–3,000 lb",
+            "basis": "Billable weight",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "billableWeightLb",
+                "operator": "between",
+                "min": 0,
+                "max": 3000
+              }
+            ],
+            "rate": 1050
+          },
+          {
+            "name": "Base LTL freight",
+            "rateCategory": "base",
+            "lane": "Bay Area → San Diego",
+            "equipmentType": "Van / Dry Van (V)",
+            "tier": "3,001–6,000 lb",
+            "basis": "Billable weight",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "billableWeightLb",
+                "operator": "between",
+                "min": 3001,
+                "max": 6000
+              }
+            ],
+            "rate": 1440
+          }
         ],
         "surchargeRules": [
-          { "code": "RESIDENTIAL", "name": "Residential delivery", "trigger": "Per delivery", "rate": 140, "unit": "flat" },
-          { "code": "APPOINTMENT", "name": "Delivery appointment", "trigger": "Per appointment", "rate": 90, "unit": "flat" }
+          {
+            "code": "RESIDENTIAL",
+            "name": "Residential delivery",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per delivery",
+            "ruleType": "per_unit",
+            "billingUnit": "DELIVERY",
+            "conditions": [
+              {
+                "field": "deliveryType",
+                "operator": "equals",
+                "value": "RESIDENTIAL"
+              }
+            ],
+            "rate": 140
+          },
+          {
+            "code": "APPOINTMENT",
+            "name": "Delivery appointment",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per appointment",
+            "ruleType": "per_unit",
+            "billingUnit": "APPOINTMENT",
+            "conditions": [
+              {
+                "field": "appointmentRequired",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 90
+          }
         ],
         "lastUpdated": "2026-09-06T11:20:00+08:00"
       },
@@ -450,12 +605,47 @@
         "createdAt": "2026-09-01T09:15:00-07:00",
         "effectiveFrom": "2026-10-01",
         "effectiveTo": "2027-03-31",
-        "shipmentIds": ["TRK-DEMO-003"],
+        "shipmentIds": [
+          "TRK-DEMO-003"
+        ],
         "rateMatrix": [
-          { "lane": "Long Beach → Phoenix", "equipmentType": "Van / Dry Van (V)", "tier": "Base charge", "basis": "Per truck", "rate": 2250 }
+          {
+            "name": "Base FTL freight",
+            "rateCategory": "base",
+            "lane": "Long Beach → Phoenix",
+            "equipmentType": "Van / Dry Van (V)",
+            "tier": "Base charge",
+            "basis": "Per truck",
+            "ruleType": "flat_rate",
+            "billingUnit": "TRUCK",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FTL"
+              }
+            ],
+            "rate": 2250
+          }
         ],
         "surchargeRules": [
-          { "code": "HIGH_VALUE", "name": "High-value handling", "trigger": "Per shipment", "rate": 200, "unit": "flat" }
+          {
+            "code": "HIGH_VALUE",
+            "name": "High-value handling",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per shipment",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "highValue",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 200
+          }
         ],
         "lastUpdated": "2026-09-06T09:45:00+08:00"
       },
@@ -471,14 +661,84 @@
         "createdAt": "2026-06-12T11:20:00-07:00",
         "effectiveFrom": "2026-07-01",
         "effectiveTo": "2026-12-31",
-        "shipmentIds": ["TRK-DEMO-004"],
+        "shipmentIds": [
+          "TRK-DEMO-004"
+        ],
         "rateMatrix": [
-          { "lane": "Central CA → Nevada", "equipmentType": "Reefer (R)", "tier": "0–4 pallets", "basis": "Per shipment", "rate": 700 },
-          { "lane": "Central CA → Nevada", "equipmentType": "Reefer (R)", "tier": "5–10 pallets", "basis": "Per shipment", "rate": 850 }
+          {
+            "name": "Base LTL freight",
+            "rateCategory": "base",
+            "lane": "Central CA → Nevada",
+            "equipmentType": "Reefer (R)",
+            "tier": "0–4 pallets",
+            "basis": "Per shipment",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "palletCount",
+                "operator": "between",
+                "min": 0,
+                "max": 4
+              }
+            ],
+            "rate": 700
+          },
+          {
+            "name": "Base LTL freight",
+            "rateCategory": "base",
+            "lane": "Central CA → Nevada",
+            "equipmentType": "Reefer (R)",
+            "tier": "5–10 pallets",
+            "basis": "Per shipment",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "palletCount",
+                "operator": "between",
+                "min": 5,
+                "max": 10
+              }
+            ],
+            "rate": 850
+          }
         ],
         "surchargeRules": [
-          { "code": "COLD_CHAIN", "name": "Refrigerated service", "trigger": "Per shipment", "rate": 15, "unit": "percent" },
-          { "code": "DETENTION", "name": "Detention", "trigger": "After 30 free min", "rate": 100, "unit": "per 30 min" }
+          {
+            "code": "COLD_CHAIN",
+            "name": "Refrigerated service",
+            "rateCategory": "additional",
+            "equipmentType": "Reefer (R)",
+            "trigger": "Per shipment",
+            "ruleType": "percentage_surcharge",
+            "billingUnit": "CHARGE_SUBTOTAL",
+            "conditions": [
+              {
+                "field": "temperatureControlled",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 15
+          },
+          {
+            "code": "DETENTION",
+            "name": "Detention",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "After 30 free min",
+            "ruleType": "threshold_time",
+            "billingUnit": "30_MIN",
+            "conditions": [
+              {
+                "field": "detentionMinutes",
+                "operator": "greaterThan",
+                "value": 30
+              }
+            ],
+            "rate": 100
+          }
         ],
         "lastUpdated": "2026-09-05T17:10:00+08:00"
       },
@@ -490,18 +750,66 @@
         "status": "accepted",
         "currency": "USD",
         "transportMode": "OCEAN",
+        "incoterms": "FOB",
         "serviceScope": "FCL · Asia to US West Coast",
-        "serviceScopes": ["FCL · Asia to US West Coast"],
+        "serviceScopes": [
+          "FCL · Asia to US West Coast"
+        ],
         "createdAt": "2025-12-18T09:30:00-08:00",
         "effectiveFrom": "2026-01-01",
         "effectiveTo": "2026-12-31",
-        "shipmentIds": ["OCN-DEMO-001"],
+        "shipmentIds": [
+          "OCN-DEMO-001"
+        ],
         "rateMatrix": [
-          { "lane": "Shanghai, CN → Oakland, CA", "equipmentType": "40' High Cube", "tier": "Base charge", "basis": "Per container", "rate": 3200 }
+          {
+            "name": "Base FCL freight",
+            "rateCategory": "base",
+            "lane": "Shanghai, CN → Oakland, CA",
+            "equipmentType": "40' High Cube",
+            "tier": "Base charge",
+            "basis": "Per container",
+            "ruleType": "flat_rate",
+            "billingUnit": "CONTAINER",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FCL"
+              }
+            ],
+            "rate": 3200
+          }
         ],
         "surchargeRules": [
-          { "code": "OCEAN_FUEL", "name": "Ocean fuel surcharge", "trigger": "Per container", "rate": 420, "unit": "flat", "billingUnit": "CONTAINER" },
-          { "code": "DOC_FEE", "name": "Documentation fee", "trigger": "Per shipment", "rate": 95, "unit": "flat", "billingUnit": "SHIPMENT" }
+          {
+            "code": "OCEAN_FUEL",
+            "name": "Ocean fuel surcharge",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per container",
+            "ruleType": "per_unit",
+            "billingUnit": "CONTAINER",
+            "conditions": [
+              {
+                "field": "containerCount",
+                "operator": "greaterThan",
+                "value": 0
+              }
+            ],
+            "rate": 420
+          },
+          {
+            "code": "DOC_FEE",
+            "name": "Documentation fee",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per shipment",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [],
+            "rate": 95
+          }
         ],
         "lastUpdated": "2026-09-04T09:20:00+08:00"
       },
@@ -513,18 +821,61 @@
         "status": "accepted",
         "currency": "USD",
         "transportMode": "AIR",
+        "incoterms": "FOB",
         "serviceScope": "Air Freight · Asia to US West Coast",
-        "serviceScopes": ["Air Freight · Asia to US West Coast"],
+        "serviceScopes": [
+          "Air Freight · Asia to US West Coast"
+        ],
         "createdAt": "2026-01-08T11:00:00+08:00",
         "effectiveFrom": "2026-01-01",
         "effectiveTo": "2026-12-31",
-        "shipmentIds": ["AIR-DEMO-002"],
+        "shipmentIds": [
+          "AIR-DEMO-002"
+        ],
         "rateMatrix": [
-          { "lane": "Taipei, TW → San Francisco, CA", "equipmentType": "Pallet", "tier": "500–1,000 KG", "basis": "Chargeable weight", "rate": 2100 }
+          {
+            "name": "Base Air Freight",
+            "rateCategory": "base",
+            "lane": "Taipei, TW → San Francisco, CA",
+            "equipmentType": "Pallet",
+            "tier": "500–1,000 KG",
+            "basis": "Chargeable weight",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "chargeableWeightKg",
+                "operator": "between",
+                "min": 500,
+                "max": 1000
+              }
+            ],
+            "rate": 2100
+          }
         ],
         "surchargeRules": [
-          { "code": "AIR_FUEL", "name": "Air fuel surcharge", "trigger": "Per shipment", "rate": 310, "unit": "flat", "billingUnit": "SHIPMENT" },
-          { "code": "SECURITY", "name": "Security screening", "trigger": "Per shipment", "rate": 85, "unit": "flat", "billingUnit": "SHIPMENT" }
+          {
+            "code": "AIR_FUEL",
+            "name": "Air fuel surcharge",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per shipment",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [],
+            "rate": 310
+          },
+          {
+            "code": "SECURITY",
+            "name": "Security screening",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per shipment",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [],
+            "rate": 85
+          }
         ],
         "lastUpdated": "2026-09-08T10:40:00+08:00"
       }
@@ -536,13 +887,54 @@
         "ratedAt": "2026-09-07T16:30:00+08:00",
         "currency": "USD",
         "inputs": [
-          { "label": "Actual weight", "value": "3,950 lb" },
-          { "label": "Delivery stops", "value": "2" },
-          { "label": "Equipment Type", "value": "Van / Dry Van (V)" }
+          {
+            "label": "Actual weight",
+            "value": "3,950 lb"
+          },
+          {
+            "label": "Delivery stops",
+            "value": "2"
+          },
+          {
+            "label": "Equipment Type",
+            "value": "Van / Dry Van (V)"
+          }
         ],
         "chargeLines": [
-          { "code": "BASE_FTL", "description": "Base FTL freight", "source": "Per truck", "amount": 2400 },
-          { "code": "MULTI_STOP", "description": "Additional delivery stop", "source": "MULTI_STOP rule", "amount": 150 }
+          {
+            "code": "BASE_FTL",
+            "description": "Base FTL freight",
+            "rateCategory": "base",
+            "equipmentType": "Van / Dry Van (V)",
+            "ruleType": "flat_rate",
+            "billingUnit": "TRUCK",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FTL"
+              }
+            ],
+            "unitPrice": 2400,
+            "amount": 2400
+          },
+          {
+            "code": "MULTI_STOP",
+            "description": "Additional delivery stop",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "per_unit",
+            "billingUnit": "STOP",
+            "conditions": [
+              {
+                "field": "deliveryStopNumber",
+                "operator": "greaterThan",
+                "value": 1
+              }
+            ],
+            "unitPrice": 150,
+            "amount": 150
+          }
         ],
         "initialAdjustments": []
       },
@@ -552,14 +944,72 @@
         "ratedAt": "2026-09-06T11:20:00+08:00",
         "currency": "USD",
         "inputs": [
-          { "label": "Actual weight", "value": "2,860 lb" },
-          { "label": "Billable weight", "value": "3,000 lb" },
-          { "label": "Rate lane", "value": "Bay Area → San Diego" }
+          {
+            "label": "Actual weight",
+            "value": "2,860 lb"
+          },
+          {
+            "label": "Billable weight",
+            "value": "3,000 lb"
+          },
+          {
+            "label": "Rate lane",
+            "value": "Bay Area → San Diego"
+          }
         ],
         "chargeLines": [
-          { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–3,000 lb tier", "amount": 1050 },
-          { "code": "RESIDENTIAL", "description": "Residential delivery", "source": "RESIDENTIAL rule", "amount": 140 },
-          { "code": "APPOINTMENT", "description": "Delivery appointment", "source": "APPOINTMENT rule", "amount": 90 }
+          {
+            "code": "BASE_LTL",
+            "description": "Base LTL freight",
+            "rateCategory": "base",
+            "equipmentType": "Van / Dry Van (V)",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "billableWeightLb",
+                "operator": "between",
+                "min": 0,
+                "max": 3000
+              }
+            ],
+            "unitPrice": 1050,
+            "amount": 1050
+          },
+          {
+            "code": "RESIDENTIAL",
+            "description": "Residential delivery",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "per_unit",
+            "billingUnit": "DELIVERY",
+            "conditions": [
+              {
+                "field": "deliveryType",
+                "operator": "equals",
+                "value": "RESIDENTIAL"
+              }
+            ],
+            "unitPrice": 140,
+            "amount": 140
+          },
+          {
+            "code": "APPOINTMENT",
+            "description": "Delivery appointment",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "per_unit",
+            "billingUnit": "APPOINTMENT",
+            "conditions": [
+              {
+                "field": "appointmentRequired",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "unitPrice": 90,
+            "amount": 90
+          }
         ],
         "initialAdjustments": []
       },
@@ -569,13 +1019,54 @@
         "ratedAt": "2026-09-06T09:45:00+08:00",
         "currency": "USD",
         "inputs": [
-          { "label": "Equipment", "value": "Dry van" },
-          { "label": "Rate basis", "value": "Per truck" },
-          { "label": "Rate lane", "value": "Long Beach → Phoenix" }
+          {
+            "label": "Equipment",
+            "value": "Dry van"
+          },
+          {
+            "label": "Rate basis",
+            "value": "Per truck"
+          },
+          {
+            "label": "Rate lane",
+            "value": "Long Beach → Phoenix"
+          }
         ],
         "chargeLines": [
-          { "code": "BASE_FTL", "description": "Base FTL freight", "source": "Dry van rate", "amount": 2250 },
-          { "code": "HIGH_VALUE", "description": "High-value handling", "source": "HIGH_VALUE rule", "amount": 200 }
+          {
+            "code": "BASE_FTL",
+            "description": "Base FTL freight",
+            "rateCategory": "base",
+            "equipmentType": "Van / Dry Van (V)",
+            "ruleType": "flat_rate",
+            "billingUnit": "TRUCK",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FTL"
+              }
+            ],
+            "unitPrice": 2250,
+            "amount": 2250
+          },
+          {
+            "code": "HIGH_VALUE",
+            "description": "High-value handling",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "highValue",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "unitPrice": 200,
+            "amount": 200
+          }
         ],
         "initialAdjustments": []
       },
@@ -585,16 +1076,69 @@
         "ratedAt": "2026-09-05T17:10:00+08:00",
         "currency": "USD",
         "inputs": [
-          { "label": "Handling units", "value": "4 pallets" },
-          { "label": "Temperature", "value": "Refrigerated" },
-          { "label": "Rate lane", "value": "Central CA → Nevada" }
+          {
+            "label": "Handling units",
+            "value": "4 pallets"
+          },
+          {
+            "label": "Temperature",
+            "value": "Refrigerated"
+          },
+          {
+            "label": "Rate lane",
+            "value": "Central CA → Nevada"
+          }
         ],
         "chargeLines": [
-          { "code": "BASE_LTL", "description": "Base LTL freight", "source": "0–4 pallets tier", "amount": 700 },
-          { "code": "COLD_CHAIN", "description": "Refrigerated service", "source": "15% surcharge", "amount": 105 }
+          {
+            "code": "BASE_LTL",
+            "description": "Base LTL freight",
+            "rateCategory": "base",
+            "equipmentType": "Reefer (R)",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "palletCount",
+                "operator": "between",
+                "min": 0,
+                "max": 4
+              }
+            ],
+            "unitPrice": 700,
+            "amount": 700
+          },
+          {
+            "code": "COLD_CHAIN",
+            "description": "Refrigerated service",
+            "rateCategory": "additional",
+            "equipmentType": "Reefer (R)",
+            "ruleType": "percentage_surcharge",
+            "billingUnit": "CHARGE_SUBTOTAL",
+            "conditions": [
+              {
+                "field": "temperatureControlled",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "unitPrice": 105,
+            "amount": 105
+          }
         ],
         "initialAdjustments": [
-          { "adjustmentId": "ADJ-DEMO-001", "description": "Detention", "amount": 175, "note": "Driver waited 45 minutes beyond free time.", "addedBy": "Demo Ops User", "addedAt": "2026-09-05T16:40:00-07:00" }
+          {
+            "adjustmentId": "ADJ-DEMO-001",
+            "sourceType": "MANUAL_ADJUSTMENT",
+            "description": "Detention",
+            "quantity": 1,
+            "billingUnit": "30_MIN",
+            "unitPrice": 175,
+            "amount": 175,
+            "note": "Driver waited 45 minutes beyond free time.",
+            "addedBy": "Demo Ops User",
+            "addedAt": "2026-09-05T16:40:00-07:00"
+          }
         ]
       },
       "OCN-DEMO-001": {
@@ -603,14 +1147,65 @@
         "ratedAt": "2026-09-04T09:20:00+08:00",
         "currency": "USD",
         "inputs": [
-          { "label": "Container", "value": "1 × 40HC" },
-          { "label": "Billable weight", "value": "18,460 KG" },
-          { "label": "Rate lane", "value": "Shanghai, CN → Oakland, CA" }
+          {
+            "label": "Container",
+            "value": "1 × 40HC"
+          },
+          {
+            "label": "Billable weight",
+            "value": "18,460 KG"
+          },
+          {
+            "label": "Rate lane",
+            "value": "Shanghai, CN → Oakland, CA"
+          }
         ],
         "chargeLines": [
-          { "code": "BASE_FCL", "description": "Base ocean freight", "source": "40HC per-container rate", "unit": "CONTAINER", "amount": 3200 },
-          { "code": "OCEAN_FUEL", "description": "Ocean fuel surcharge", "source": "Per container", "unit": "CONTAINER", "amount": 420 },
-          { "code": "DOC_FEE", "description": "Documentation fee", "source": "Per shipment", "unit": "SHIPMENT", "amount": 95 }
+          {
+            "code": "BASE_FCL",
+            "description": "Base ocean freight",
+            "rateCategory": "base",
+            "equipmentType": "40' High Cube",
+            "ruleType": "flat_rate",
+            "billingUnit": "CONTAINER",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FCL"
+              }
+            ],
+            "unitPrice": 3200,
+            "amount": 3200
+          },
+          {
+            "code": "OCEAN_FUEL",
+            "description": "Ocean fuel surcharge",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "per_unit",
+            "billingUnit": "CONTAINER",
+            "conditions": [
+              {
+                "field": "containerCount",
+                "operator": "greaterThan",
+                "value": 0
+              }
+            ],
+            "unitPrice": 420,
+            "amount": 420
+          },
+          {
+            "code": "DOC_FEE",
+            "description": "Documentation fee",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [],
+            "unitPrice": 95,
+            "amount": 95
+          }
         ],
         "initialAdjustments": []
       },
@@ -620,14 +1215,60 @@
         "ratedAt": "2026-09-08T10:40:00+08:00",
         "currency": "USD",
         "inputs": [
-          { "label": "Actual weight", "value": "486 KG" },
-          { "label": "Billable weight", "value": "962 KG" },
-          { "label": "Rate lane", "value": "Taipei, TW → San Francisco, CA" }
+          {
+            "label": "Actual weight",
+            "value": "486 KG"
+          },
+          {
+            "label": "Billable weight",
+            "value": "962 KG"
+          },
+          {
+            "label": "Rate lane",
+            "value": "Taipei, TW → San Francisco, CA"
+          }
         ],
         "chargeLines": [
-          { "code": "BASE_AIR", "description": "Base air freight", "source": "500–1,000 KG tier", "unit": "SHIPMENT", "amount": 2100 },
-          { "code": "AIR_FUEL", "description": "Air fuel surcharge", "source": "Per shipment", "unit": "SHIPMENT", "amount": 310 },
-          { "code": "SECURITY", "description": "Security screening", "source": "Per shipment", "unit": "SHIPMENT", "amount": 85 }
+          {
+            "code": "BASE_AIR",
+            "description": "Base air freight",
+            "rateCategory": "base",
+            "equipmentType": "Pallet",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "chargeableWeightKg",
+                "operator": "between",
+                "min": 500,
+                "max": 1000
+              }
+            ],
+            "unitPrice": 2100,
+            "amount": 2100
+          },
+          {
+            "code": "AIR_FUEL",
+            "description": "Air fuel surcharge",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [],
+            "unitPrice": 310,
+            "amount": 310
+          },
+          {
+            "code": "SECURITY",
+            "description": "Security screening",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [],
+            "unitPrice": 85,
+            "amount": 85
+          }
         ],
         "initialAdjustments": []
       }
@@ -694,6 +1335,1834 @@
         "status": "draft",
         "dueDate": null,
         "missingData": []
+      }
+    ],
+    "extensionData": {
+      "shipmentTargetCount": 30,
+      "billingTargetCount": 30,
+      "sampleCustomers": [
+        "Demo Home Supply Inc.",
+        "Demo Foods West LLC",
+        "Pacific Coast Imports",
+        "Golden State Furniture",
+        "Sierra Medical Supply",
+        "Westline Components",
+        "Sunrise Foods",
+        "North Bay Retail",
+        "Desert Home Goods",
+        "Summit Industrial",
+        "Harbor Electronics",
+        "Valley Distribution"
+      ],
+      "sampleRoutes": [
+        "San Jose, CA → Sacramento, CA",
+        "Los Angeles, CA → San Francisco, CA",
+        "Stockton, CA → Reno, NV",
+        "Ontario, CA → Phoenix, AZ",
+        "San Diego, CA → Las Vegas, NV",
+        "Oakland, CA → Portland, OR",
+        "Fresno, CA → Bakersfield, CA",
+        "Long Beach, CA → Tucson, AZ",
+        "Anaheim, CA → Salt Lake City, UT",
+        "Hayward, CA → Seattle, WA"
+      ],
+      "transportStagePreviewRows": [
+        {
+          "shipmentId": "OCN-DEMO-001",
+          "customer": "Demo Retail Distribution LLC",
+          "referenceNumber": "REF-DEMO-0914-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "FCL",
+          "route": "Shanghai, CN → Oakland, CA",
+          "pickupDate": "2026-08-28",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-04T09:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-04",
+            "operator": "Avery Chen",
+            "customerReference": "PO-78432",
+            "billTo": "Demo Retail Distribution LLC",
+            "master": {
+              "mblNo": "MAEU260814739",
+              "overseasAgent": "Demo Shanghai Forwarding Ltd.",
+              "carrier": "Demo Ocean Line",
+              "blAccount": "BEST USA",
+              "pol": "Shanghai, CN",
+              "pod": "Oakland, CA",
+              "vessel": "Demo Horizon",
+              "voyage": "026E",
+              "etd": "2026-08-28",
+              "eta": "2026-09-14",
+              "cyCfsLocation": "Oakland International Container Terminal"
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-260901",
+              "amsNo": "AMSD260901",
+              "shipper": "Demo Shanghai Manufacturing Co.",
+              "consignee": "Demo Retail Distribution LLC",
+              "notifyParty": "Demo Retail Distribution LLC",
+              "placeOfDelivery": "Oakland, CA",
+              "placeOfDeliveryEta": "2026-09-15",
+              "deliveryLocation": "Demo Oakland Distribution Center",
+              "cyCfsLocation": "Oakland International Container Terminal",
+              "mark": "DRD / OAK / 260901",
+              "description": "Home furnishing components"
+            },
+            "containers": [
+              {
+                "containerNo": "MSCU1234567",
+                "typeSize": "40HC",
+                "sealNo": "SL908214",
+                "packages": "820 CTNS",
+                "weight": "18,460 KG",
+                "measurement": "61.2 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-011",
+          "customer": "Harbor Electronics",
+          "referenceNumber": "REF-DEMO-0918-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "LCL",
+          "route": "Kaohsiung, TW → Long Beach, CA",
+          "pickupDate": "2026-09-18",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-08T14:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-08",
+            "operator": "Morgan Lee",
+            "customerReference": "HE-PO-91802",
+            "billTo": "Harbor Electronics",
+            "master": {
+              "mblNo": "ONEYKHHB260918",
+              "overseasAgent": "Demo Kaohsiung Logistics",
+              "carrier": "Demo Ocean Network",
+              "blAccount": "BEST USA",
+              "pol": "Kaohsiung, TW",
+              "pod": "Long Beach, CA",
+              "vessel": "Demo Pacific Star",
+              "voyage": "118W",
+              "etd": "2026-09-18",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-260918",
+              "amsNo": "AMSK260918",
+              "shipper": "Demo Taiwan Components Ltd.",
+              "consignee": "Harbor Electronics",
+              "notifyParty": "Harbor Electronics",
+              "placeOfDelivery": "Long Beach, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Harbor Electronics Receiving",
+              "cyCfsLocation": "",
+              "mark": "HE / LGB / 918",
+              "description": "Electronic components, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "OOLU7654321",
+                "typeSize": "20GP",
+                "sealNo": "KS260918",
+                "packages": "146 PKGS",
+                "weight": "6,240 KG",
+                "measurement": "24.8 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-002",
+          "customer": "Demo Home Supply Inc.",
+          "referenceNumber": "REF-DEMO-0910-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "Taipei, TW → San Francisco, CA",
+          "pickupDate": "2026-09-06",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-08T10:40:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-08",
+            "operator": "Jordan Kim",
+            "customerReference": "DHS-AIR-0910",
+            "billTo": "Demo Home Supply Inc.",
+            "master": {
+              "mawbNo": "695-26091234",
+              "awbType": "Consolidation",
+              "carrier": "Demo Pacific Air Cargo",
+              "coLoader": "Demo Taipei Air Logistics",
+              "departureAirport": "TPE · Taipei",
+              "destinationAirport": "SFO · San Francisco",
+              "etd": "2026-09-06T22:20",
+              "eta": "2026-09-07T18:10",
+              "flightNo": "BR 018",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-260906",
+              "shipper": "Demo Taiwan Home Products",
+              "consignee": "Demo Home Supply Inc.",
+              "notifyParty": "Demo Home Supply Inc.",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "SFO Cargo Building 5",
+              "commodity": "Home organization accessories",
+              "mark": "DHS / SFO / 260906",
+              "packages": "24 CTNS",
+              "grossWeight": "486 KG",
+              "chargeableWeight": "962 KG",
+              "volumeWeight": "962 KG"
+            },
+            "dimensions": [
+              {
+                "length": "120",
+                "width": "80",
+                "height": "80",
+                "pieces": "4",
+                "unit": "CM"
+              },
+              {
+                "length": "60",
+                "width": "50",
+                "height": "45",
+                "pieces": "20",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-012",
+          "customer": "Sierra Medical Supply",
+          "referenceNumber": "REF-DEMO-0920-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "Seoul, KR → Los Angeles, CA",
+          "pickupDate": "2026-09-20",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-08T15:25:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-08",
+            "operator": "Taylor Wang",
+            "customerReference": "SMS-URG-0920",
+            "billTo": "Sierra Medical Supply",
+            "master": {
+              "mawbNo": "180-26092018",
+              "awbType": "Direct master",
+              "carrier": "Demo Korea Air Cargo",
+              "coLoader": "",
+              "departureAirport": "ICN · Seoul",
+              "destinationAirport": "LAX · Los Angeles",
+              "etd": "2026-09-20T10:30",
+              "eta": "",
+              "flightNo": "KE 213",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-260920",
+              "shipper": "Demo Seoul Medical Devices",
+              "consignee": "Sierra Medical Supply",
+              "notifyParty": "Sierra Medical Supply",
+              "serviceTerm": "Airport to door",
+              "shipType": "Medical devices",
+              "destinationHandlingLocation": "",
+              "commodity": "Non-sterile medical equipment",
+              "mark": "SMS / LAX / URGENT",
+              "packages": "8 PKGS",
+              "grossWeight": "218 KG",
+              "chargeableWeight": "246 KG",
+              "volumeWeight": "246 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "8",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-012",
+          "customer": "Pacific Coast Imports",
+          "referenceNumber": "REF-DEMO-0912-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "FCL",
+          "route": "Ningbo, CN → Long Beach, CA",
+          "pickupDate": "2026-09-12",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-10T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-10",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "PCI-PO-012",
+            "billTo": "Pacific Coast Imports",
+            "master": {
+              "mblNo": "MBL-DEMO-012",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Line",
+              "blAccount": "BEST USA",
+              "pol": "Ningbo, CN",
+              "pod": "Long Beach, CA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "012E",
+              "etd": "2026-09-12",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-012",
+              "amsNo": "AMS-DEMO-012",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Pacific Coast Imports",
+              "notifyParty": "Pacific Coast Imports",
+              "placeOfDelivery": "Long Beach, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Pacific Coast Imports Receiving",
+              "cyCfsLocation": "",
+              "mark": "012 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO012001",
+                "typeSize": "40HC",
+                "sealNo": "SL012",
+                "packages": "680 CTNS",
+                "weight": "16,800 KG",
+                "measurement": "58.4 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-013",
+          "customer": "Golden State Furniture",
+          "referenceNumber": "REF-DEMO-0914-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "LCL",
+          "route": "Busan, KR → Seattle, WA",
+          "pickupDate": "2026-09-14",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-11T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-11",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "GSF-PO-013",
+            "billTo": "Golden State Furniture",
+            "master": {
+              "mblNo": "MBL-DEMO-013",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Network",
+              "blAccount": "BEST USA",
+              "pol": "Busan, KR",
+              "pod": "Seattle, WA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "013E",
+              "etd": "2026-09-14",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-013",
+              "amsNo": "AMS-DEMO-013",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Golden State Furniture",
+              "notifyParty": "Golden State Furniture",
+              "placeOfDelivery": "Seattle, WA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Golden State Furniture Receiving",
+              "cyCfsLocation": "",
+              "mark": "013 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO013001",
+                "typeSize": "20GP",
+                "sealNo": "SL013",
+                "packages": "96 PKGS",
+                "weight": "4,250 KG",
+                "measurement": "18.6 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-014",
+          "customer": "Valley Distribution",
+          "referenceNumber": "REF-DEMO-0916-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "FCL",
+          "route": "Yantian, CN → Tacoma, WA",
+          "pickupDate": "2026-09-16",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-12T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-12",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "VD-PO-014",
+            "billTo": "Valley Distribution",
+            "master": {
+              "mblNo": "MBL-DEMO-014",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Line",
+              "blAccount": "BEST USA",
+              "pol": "Yantian, CN",
+              "pod": "Tacoma, WA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "014E",
+              "etd": "2026-09-16",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-014",
+              "amsNo": "AMS-DEMO-014",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Valley Distribution",
+              "notifyParty": "Valley Distribution",
+              "placeOfDelivery": "Tacoma, WA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Valley Distribution Receiving",
+              "cyCfsLocation": "",
+              "mark": "014 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO014001",
+                "typeSize": "40HC",
+                "sealNo": "SL014",
+                "packages": "680 CTNS",
+                "weight": "16,800 KG",
+                "measurement": "58.4 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-015",
+          "customer": "Desert Home Goods",
+          "referenceNumber": "REF-DEMO-0918-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "LCL",
+          "route": "Ho Chi Minh City, VN → Oakland, CA",
+          "pickupDate": "2026-09-18",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-13T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-13",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "DHG-PO-015",
+            "billTo": "Desert Home Goods",
+            "master": {
+              "mblNo": "MBL-DEMO-015",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Network",
+              "blAccount": "BEST USA",
+              "pol": "Ho Chi Minh City, VN",
+              "pod": "Oakland, CA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "015E",
+              "etd": "2026-09-18",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-015",
+              "amsNo": "AMS-DEMO-015",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Desert Home Goods",
+              "notifyParty": "Desert Home Goods",
+              "placeOfDelivery": "Oakland, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Desert Home Goods Receiving",
+              "cyCfsLocation": "",
+              "mark": "015 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO015001",
+                "typeSize": "20GP",
+                "sealNo": "SL015",
+                "packages": "96 PKGS",
+                "weight": "4,250 KG",
+                "measurement": "18.6 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-016",
+          "customer": "Summit Industrial",
+          "referenceNumber": "REF-DEMO-0920-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "FCL",
+          "route": "Shanghai, CN → Los Angeles, CA",
+          "pickupDate": "2026-09-20",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-14T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-14",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "SI-PO-016",
+            "billTo": "Summit Industrial",
+            "master": {
+              "mblNo": "MBL-DEMO-016",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Line",
+              "blAccount": "BEST USA",
+              "pol": "Shanghai, CN",
+              "pod": "Los Angeles, CA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "016E",
+              "etd": "2026-09-20",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-016",
+              "amsNo": "AMS-DEMO-016",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Summit Industrial",
+              "notifyParty": "Summit Industrial",
+              "placeOfDelivery": "Los Angeles, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Summit Industrial Receiving",
+              "cyCfsLocation": "",
+              "mark": "016 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO016001",
+                "typeSize": "40HC",
+                "sealNo": "SL016",
+                "packages": "680 CTNS",
+                "weight": "16,800 KG",
+                "measurement": "58.4 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-017",
+          "customer": "North Bay Retail",
+          "referenceNumber": "REF-DEMO-0922-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "LCL",
+          "route": "Keelung, TW → San Francisco, CA",
+          "pickupDate": "2026-09-22",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-15T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-15",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "NBR-PO-017",
+            "billTo": "North Bay Retail",
+            "master": {
+              "mblNo": "MBL-DEMO-017",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Network",
+              "blAccount": "BEST USA",
+              "pol": "Keelung, TW",
+              "pod": "San Francisco, CA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "017E",
+              "etd": "2026-09-22",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-017",
+              "amsNo": "AMS-DEMO-017",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "North Bay Retail",
+              "notifyParty": "North Bay Retail",
+              "placeOfDelivery": "San Francisco, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "North Bay Retail Receiving",
+              "cyCfsLocation": "",
+              "mark": "017 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO017001",
+                "typeSize": "20GP",
+                "sealNo": "SL017",
+                "packages": "96 PKGS",
+                "weight": "4,250 KG",
+                "measurement": "18.6 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-018",
+          "customer": "Westline Components",
+          "referenceNumber": "REF-DEMO-0924-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "FCL",
+          "route": "Qingdao, CN → Long Beach, CA",
+          "pickupDate": "2026-09-24",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-16T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-16",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "WC-PO-018",
+            "billTo": "Westline Components",
+            "master": {
+              "mblNo": "MBL-DEMO-018",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Line",
+              "blAccount": "BEST USA",
+              "pol": "Qingdao, CN",
+              "pod": "Long Beach, CA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "018E",
+              "etd": "2026-09-24",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-018",
+              "amsNo": "AMS-DEMO-018",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Westline Components",
+              "notifyParty": "Westline Components",
+              "placeOfDelivery": "Long Beach, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Westline Components Receiving",
+              "cyCfsLocation": "",
+              "mark": "018 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO018001",
+                "typeSize": "40HC",
+                "sealNo": "SL018",
+                "packages": "680 CTNS",
+                "weight": "16,800 KG",
+                "measurement": "58.4 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "OCN-DEMO-019",
+          "customer": "Sunrise Foods",
+          "referenceNumber": "REF-DEMO-0926-OCEAN",
+          "transportMode": "OCEAN",
+          "operationDirection": "IMPORT",
+          "serviceType": "LCL",
+          "route": "Yokohama, JP → Oakland, CA",
+          "pickupDate": "2026-09-26",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-17T11:20:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-17",
+            "operator": "Demo Ocean Ops",
+            "customerReference": "SF-PO-019",
+            "billTo": "Sunrise Foods",
+            "master": {
+              "mblNo": "MBL-DEMO-019",
+              "overseasAgent": "Demo Asia Forwarding Partner",
+              "carrier": "Demo Ocean Network",
+              "blAccount": "BEST USA",
+              "pol": "Yokohama, JP",
+              "pod": "Oakland, CA",
+              "vessel": "Demo Pacific Voyager",
+              "voyage": "019E",
+              "etd": "2026-09-26",
+              "eta": "",
+              "cyCfsLocation": ""
+            },
+            "house": {
+              "hblNo": "HBL-DEMO-019",
+              "amsNo": "AMS-DEMO-019",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Sunrise Foods",
+              "notifyParty": "Sunrise Foods",
+              "placeOfDelivery": "Oakland, CA",
+              "placeOfDeliveryEta": "",
+              "deliveryLocation": "Sunrise Foods Receiving",
+              "cyCfsLocation": "",
+              "mark": "019 / BEST USA",
+              "description": "General merchandise, non-hazardous"
+            },
+            "containers": [
+              {
+                "containerNo": "DEMO019001",
+                "typeSize": "20GP",
+                "sealNo": "SL019",
+                "packages": "96 PKGS",
+                "weight": "4,250 KG",
+                "measurement": "18.6 CBM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-013",
+          "customer": "Harbor Electronics",
+          "referenceNumber": "REF-DEMO-0911-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "NRT · Tokyo → SFO · San Francisco",
+          "pickupDate": "2026-09-11",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-10T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-10",
+            "operator": "Demo Air Ops",
+            "customerReference": "HE-AIR-013",
+            "billTo": "Harbor Electronics",
+            "master": {
+              "mawbNo": "180-2609013",
+              "awbType": "Consolidation",
+              "carrier": "Demo Pacific Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "NRT · Tokyo",
+              "destinationAirport": "SFO · San Francisco",
+              "etd": "2026-09-11T10:30",
+              "eta": "",
+              "flightNo": "DE 013",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-013",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Harbor Electronics",
+              "notifyParty": "Harbor Electronics",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "013 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-014",
+          "customer": "Pacific Coast Imports",
+          "referenceNumber": "REF-DEMO-0913-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "ICN · Seoul → DFW · Dallas",
+          "pickupDate": "2026-09-13",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-11T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-11",
+            "operator": "Demo Air Ops",
+            "customerReference": "PCI-AIR-014",
+            "billTo": "Pacific Coast Imports",
+            "master": {
+              "mawbNo": "180-2609014",
+              "awbType": "Consolidation",
+              "carrier": "Demo Korea Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "ICN · Seoul",
+              "destinationAirport": "DFW · Dallas",
+              "etd": "2026-09-13T10:30",
+              "eta": "",
+              "flightNo": "DE 014",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-014",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Pacific Coast Imports",
+              "notifyParty": "Pacific Coast Imports",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "014 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-015",
+          "customer": "Valley Distribution",
+          "referenceNumber": "REF-DEMO-0915-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "TPE · Taipei → LAX · Los Angeles",
+          "pickupDate": "2026-09-15",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-12T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-12",
+            "operator": "Demo Air Ops",
+            "customerReference": "VD-AIR-015",
+            "billTo": "Valley Distribution",
+            "master": {
+              "mawbNo": "180-2609015",
+              "awbType": "Consolidation",
+              "carrier": "Demo Pacific Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "TPE · Taipei",
+              "destinationAirport": "LAX · Los Angeles",
+              "etd": "2026-09-15T10:30",
+              "eta": "",
+              "flightNo": "DE 015",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-015",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Valley Distribution",
+              "notifyParty": "Valley Distribution",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "015 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-016",
+          "customer": "Sierra Medical Supply",
+          "referenceNumber": "REF-DEMO-0917-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "ICN · Seoul → ORD · Chicago",
+          "pickupDate": "2026-09-17",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-13T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-13",
+            "operator": "Demo Air Ops",
+            "customerReference": "SMS-AIR-016",
+            "billTo": "Sierra Medical Supply",
+            "master": {
+              "mawbNo": "180-2609016",
+              "awbType": "Consolidation",
+              "carrier": "Demo Korea Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "ICN · Seoul",
+              "destinationAirport": "ORD · Chicago",
+              "etd": "2026-09-17T10:30",
+              "eta": "",
+              "flightNo": "DE 016",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-016",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Sierra Medical Supply",
+              "notifyParty": "Sierra Medical Supply",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "016 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-017",
+          "customer": "Westline Components",
+          "referenceNumber": "REF-DEMO-0919-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "HKG · Hong Kong → LAX · Los Angeles",
+          "pickupDate": "2026-09-19",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-14T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-14",
+            "operator": "Demo Air Ops",
+            "customerReference": "WC-AIR-017",
+            "billTo": "Westline Components",
+            "master": {
+              "mawbNo": "180-2609017",
+              "awbType": "Consolidation",
+              "carrier": "Demo Pacific Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "HKG · Hong Kong",
+              "destinationAirport": "LAX · Los Angeles",
+              "etd": "2026-09-19T10:30",
+              "eta": "",
+              "flightNo": "DE 017",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-017",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Westline Components",
+              "notifyParty": "Westline Components",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "017 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-018",
+          "customer": "Summit Industrial",
+          "referenceNumber": "REF-DEMO-0921-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "ICN · Seoul → SEA · Seattle",
+          "pickupDate": "2026-09-21",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-15T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-15",
+            "operator": "Demo Air Ops",
+            "customerReference": "SI-AIR-018",
+            "billTo": "Summit Industrial",
+            "master": {
+              "mawbNo": "180-2609018",
+              "awbType": "Consolidation",
+              "carrier": "Demo Korea Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "ICN · Seoul",
+              "destinationAirport": "SEA · Seattle",
+              "etd": "2026-09-21T10:30",
+              "eta": "",
+              "flightNo": "DE 018",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-018",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Summit Industrial",
+              "notifyParty": "Summit Industrial",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "018 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-019",
+          "customer": "Demo Foods West LLC",
+          "referenceNumber": "REF-DEMO-0923-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "TPE · Taipei → SFO · San Francisco",
+          "pickupDate": "2026-09-23",
+          "status": "completed",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-16T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-16",
+            "operator": "Demo Air Ops",
+            "customerReference": "DFWL-AIR-019",
+            "billTo": "Demo Foods West LLC",
+            "master": {
+              "mawbNo": "180-2609019",
+              "awbType": "Consolidation",
+              "carrier": "Demo Pacific Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "TPE · Taipei",
+              "destinationAirport": "SFO · San Francisco",
+              "etd": "2026-09-23T10:30",
+              "eta": "",
+              "flightNo": "DE 019",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-019",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Demo Foods West LLC",
+              "notifyParty": "Demo Foods West LLC",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "019 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        },
+        {
+          "shipmentId": "AIR-DEMO-020",
+          "customer": "Desert Home Goods",
+          "referenceNumber": "REF-DEMO-0925-AIR",
+          "transportMode": "AIR",
+          "operationDirection": "IMPORT",
+          "serviceType": "Air Freight",
+          "route": "ICN · Seoul → LAX · Los Angeles",
+          "pickupDate": "2026-09-25",
+          "status": "in_review",
+          "reviewIssueCount": 0,
+          "lastUpdated": "2026-09-17T15:10:00+08:00",
+          "detailAvailable": true,
+          "modeDetails": {
+            "postDate": "2026-09-17",
+            "operator": "Demo Air Ops",
+            "customerReference": "DHG-AIR-020",
+            "billTo": "Desert Home Goods",
+            "master": {
+              "mawbNo": "180-2609020",
+              "awbType": "Consolidation",
+              "carrier": "Demo Korea Air Cargo",
+              "coLoader": "Demo Asia Air Logistics",
+              "departureAirport": "ICN · Seoul",
+              "destinationAirport": "LAX · Los Angeles",
+              "etd": "2026-09-25T10:30",
+              "eta": "",
+              "flightNo": "DE 020",
+              "connectingFlight": "Direct"
+            },
+            "house": {
+              "hawbNo": "HAWB-DEMO-020",
+              "shipper": "Demo Asia Exporter Ltd.",
+              "consignee": "Desert Home Goods",
+              "notifyParty": "Desert Home Goods",
+              "serviceTerm": "Airport to airport",
+              "shipType": "General cargo",
+              "destinationHandlingLocation": "",
+              "commodity": "General merchandise, non-hazardous",
+              "mark": "020 / BEST USA",
+              "packages": "12 PKGS",
+              "grossWeight": "286 KG",
+              "chargeableWeight": "342 KG",
+              "volumeWeight": "342 KG"
+            },
+            "dimensions": [
+              {
+                "length": "100",
+                "width": "80",
+                "height": "70",
+                "pieces": "12",
+                "unit": "CM"
+              }
+            ]
+          }
+        }
+      ],
+      "sampleCarriers": [
+        "Pacific Linehaul LLC",
+        "Golden Gate Freight",
+        "West Coast Carrier Inc.",
+        "Summit Transport LLC"
+      ],
+      "billingCustomerPool": [
+        "Demo Home Supply Inc.",
+        "Demo Foods West LLC",
+        "Desert Home Goods",
+        "Harbor Electronics",
+        "Pacific Coast Imports"
+      ],
+      "billingCarrierPool": [
+        "Demo Carrier West LLC",
+        "Pacific Linehaul LLC",
+        "Golden Gate Freight",
+        "West Coast Carrier Inc.",
+        "Summit Transport LLC"
+      ],
+      "partnerContactNames": [
+        "Alex Chen",
+        "Jordan Lee",
+        "Morgan Davis",
+        "Taylor Kim"
+      ],
+      "carrierContactNames": [
+        "Dispatch Desk",
+        "Carrier Operations",
+        "Linehaul Team",
+        "Capacity Desk"
+      ],
+      "generatedQuoteDefaults": {
+        "oceanFclRate": 3200,
+        "oceanLclRate": 1450,
+        "airRate": 2100,
+        "truckingFtlRate": 1800,
+        "truckingLtlRate": 500,
+        "internationalScope": "Asia to US West Coast",
+        "truckingScope": "West Coast"
+      },
+      "generatedBillingDefaults": {
+        "customerBaseAmount": 850,
+        "customerIncrement": 75,
+        "vendorBaseAmount": 540,
+        "vendorIncrement": 45
+      }
+    },
+    "ruleTypes": [
+      {
+        "ruleType": "flat_rate",
+        "label": "Flat rate",
+        "description": "One fixed amount when conditions match.",
+        "rateLabel": "Fixed amount",
+        "defaultUnit": "flat"
+      },
+      {
+        "ruleType": "per_unit",
+        "label": "Per unit",
+        "description": "Quantity multiplied by a configured unit amount.",
+        "rateLabel": "Unit rate",
+        "defaultUnit": "per unit"
+      },
+      {
+        "ruleType": "tiered_rate",
+        "label": "Tiered rate",
+        "description": "Select a price from weight, volume or quantity tiers.",
+        "rateLabel": "Tier rate",
+        "defaultUnit": "tier"
+      },
+      {
+        "ruleType": "percentage_surcharge",
+        "label": "Percentage surcharge",
+        "description": "Apply a percentage to eligible charge lines.",
+        "rateLabel": "Percentage rate",
+        "defaultUnit": "percent"
+      },
+      {
+        "ruleType": "threshold_time",
+        "label": "Threshold + time",
+        "description": "Start charging after a free threshold, then price each time block.",
+        "rateLabel": "Block rate",
+        "defaultUnit": "per 30 min"
+      }
+    ],
+    "carrierRatePlans": {
+      "TRK-DEMO-001": {
+        "ratePlanId": "COST-DEMO-001",
+        "name": "Pacific FTL Multi-stop Cost 2026",
+        "counterparty": "Pacific Linehaul LLC",
+        "serviceType": "FTL",
+        "serviceScope": "FTL · California multi-stop",
+        "transportMode": "TRUCKING",
+        "status": "accepted",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-11",
+        "version": 1,
+        "currency": "USD"
+      },
+      "TRK-DEMO-002": {
+        "ratePlanId": "COST-DEMO-002",
+        "name": "Golden Gate LTL Cost 2026",
+        "counterparty": "Golden Gate Freight",
+        "serviceType": "LTL",
+        "serviceScope": "LTL · West Coast",
+        "transportMode": "TRUCKING",
+        "status": "accepted",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-02",
+        "version": 2,
+        "currency": "USD"
+      },
+      "TRK-DEMO-003": {
+        "ratePlanId": "COST-DEMO-003",
+        "name": "West Coast FTL Cost 2026",
+        "counterparty": "West Coast Carrier Inc.",
+        "serviceType": "FTL",
+        "serviceScope": "FTL · Southwest",
+        "transportMode": "TRUCKING",
+        "status": "accepted",
+        "effectiveFrom": "2026-04-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-05",
+        "version": 1,
+        "currency": "USD"
+      },
+      "TRK-DEMO-004": {
+        "ratePlanId": "COST-DEMO-004",
+        "name": "Summit Refrigerated Cost 2026",
+        "counterparty": "Summit Transport LLC",
+        "serviceType": "LTL",
+        "serviceScope": "LTL · Refrigerated",
+        "transportMode": "TRUCKING",
+        "status": "accepted",
+        "effectiveFrom": "2026-02-01",
+        "effectiveTo": "2027-01-31",
+        "lastUpdated": "2026-09-07",
+        "version": 3,
+        "currency": "USD"
+      },
+      "OCN-DEMO-001": {
+        "ratePlanId": "COST-DEMO-005",
+        "name": "Demo Ocean Line FCL Cost 2026",
+        "counterparty": "Demo Ocean Line",
+        "serviceType": "FCL",
+        "serviceScope": "FCL · Asia to US West Coast",
+        "transportMode": "OCEAN",
+        "status": "accepted",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-04",
+        "version": 1,
+        "currency": "USD"
+      },
+      "OCN-DEMO-011": {
+        "ratePlanId": "COST-DEMO-006",
+        "name": "Demo Ocean Network LCL Cost 2026",
+        "counterparty": "Demo Ocean Network",
+        "serviceType": "LCL",
+        "serviceScope": "LCL · Asia to US West Coast",
+        "transportMode": "OCEAN",
+        "status": "accepted",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-08",
+        "version": 1,
+        "currency": "USD"
+      },
+      "AIR-DEMO-002": {
+        "ratePlanId": "COST-DEMO-007",
+        "name": "Demo Pacific Air Cargo Cost 2026",
+        "counterparty": "Demo Pacific Air Cargo",
+        "serviceType": "Air Freight",
+        "serviceScope": "Air Freight · Asia to US West Coast",
+        "transportMode": "AIR",
+        "status": "accepted",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-08",
+        "version": 1,
+        "currency": "USD"
+      },
+      "AIR-DEMO-012": {
+        "ratePlanId": "COST-DEMO-008",
+        "name": "Demo Korea Air Cargo Cost 2026",
+        "counterparty": "Demo Korea Air Cargo",
+        "serviceType": "Air Freight",
+        "serviceScope": "Air Freight · Asia to US West Coast",
+        "transportMode": "AIR",
+        "status": "accepted",
+        "effectiveFrom": "2026-01-01",
+        "effectiveTo": "2026-12-31",
+        "lastUpdated": "2026-09-08",
+        "version": 1,
+        "currency": "USD"
+      }
+    },
+    "vendorPricingResults": {
+      "TRK-DEMO-001": {
+        "calculationStatus": "estimated",
+        "chargeLines": [
+          {
+            "code": "BASE_FTL",
+            "name": "Carrier truck rate",
+            "rateCategory": "base",
+            "equipmentType": "Van / Dry Van (V)",
+            "ruleType": "flat_rate",
+            "billingUnit": "TRUCK",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FTL"
+              }
+            ],
+            "rate": 1850,
+            "unitPrice": 1850,
+            "amount": 1850
+          },
+          {
+            "code": "MULTI_STOP",
+            "name": "Additional delivery stop",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "per_unit",
+            "billingUnit": "STOP",
+            "conditions": [
+              {
+                "field": "deliveryStopNumber",
+                "operator": "greaterThan",
+                "value": 1
+              }
+            ],
+            "rate": 125,
+            "unitPrice": 125,
+            "amount": 125
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "TRK-DEMO-002": {
+        "calculationStatus": "final",
+        "chargeLines": [
+          {
+            "code": "BASE_LTL",
+            "name": "Carrier linehaul",
+            "rateCategory": "base",
+            "equipmentType": "Van / Dry Van (V)",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "LTL"
+              }
+            ],
+            "rate": 880,
+            "unitPrice": 880,
+            "amount": 880
+          },
+          {
+            "code": "APPOINTMENT",
+            "name": "Appointment reimbursement",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "per_unit",
+            "billingUnit": "APPOINTMENT",
+            "conditions": [
+              {
+                "field": "appointmentRequired",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 80,
+            "unitPrice": 80,
+            "amount": 80
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "TRK-DEMO-003": {
+        "calculationStatus": "estimated",
+        "chargeLines": [
+          {
+            "code": "BASE_FTL",
+            "name": "Carrier truck rate",
+            "rateCategory": "base",
+            "equipmentType": "Van / Dry Van (V)",
+            "ruleType": "flat_rate",
+            "billingUnit": "TRUCK",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FTL"
+              }
+            ],
+            "rate": 1900,
+            "unitPrice": 1900,
+            "amount": 1900
+          },
+          {
+            "code": "HIGH_VALUE",
+            "name": "High-value handling",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "highValue",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 150,
+            "unitPrice": 150,
+            "amount": 150
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "TRK-DEMO-004": {
+        "calculationStatus": "final",
+        "chargeLines": [
+          {
+            "code": "BASE_LTL",
+            "name": "Carrier linehaul",
+            "rateCategory": "base",
+            "equipmentType": "Reefer (R)",
+            "ruleType": "tiered_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "LTL"
+              }
+            ],
+            "rate": 610,
+            "unitPrice": 610,
+            "amount": 610
+          },
+          {
+            "code": "COLD_CHAIN",
+            "name": "Refrigerated equipment",
+            "rateCategory": "additional",
+            "equipmentType": "Reefer (R)",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "temperatureControlled",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 70,
+            "unitPrice": 70,
+            "amount": 70
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "OCN-DEMO-001": {
+        "calculationStatus": "estimated",
+        "chargeLines": [
+          {
+            "code": "BASE_FCL",
+            "name": "Ocean freight",
+            "rateCategory": "base",
+            "equipmentType": "40' High Cube",
+            "ruleType": "flat_rate",
+            "billingUnit": "CONTAINER",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "FCL"
+              }
+            ],
+            "rate": 2700,
+            "unitPrice": 2700,
+            "amount": 2700
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "OCN-DEMO-011": {
+        "calculationStatus": "estimated",
+        "chargeLines": [
+          {
+            "code": "BASE_LCL",
+            "name": "Ocean freight",
+            "rateCategory": "base",
+            "equipmentType": null,
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "LCL"
+              }
+            ],
+            "rate": 1120,
+            "unitPrice": 1120,
+            "amount": 1120
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "AIR-DEMO-002": {
+        "calculationStatus": "estimated",
+        "chargeLines": [
+          {
+            "code": "BASE_AIR",
+            "name": "Air freight",
+            "rateCategory": "base",
+            "equipmentType": "Pallet",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "Air Freight"
+              }
+            ],
+            "rate": 1780,
+            "unitPrice": 1780,
+            "amount": 1780
+          }
+        ],
+        "initialAdjustments": []
+      },
+      "AIR-DEMO-012": {
+        "calculationStatus": "estimated",
+        "chargeLines": [
+          {
+            "code": "BASE_AIR",
+            "name": "Air freight",
+            "rateCategory": "base",
+            "equipmentType": "Pallet",
+            "ruleType": "flat_rate",
+            "billingUnit": "SHIPMENT",
+            "conditions": [
+              {
+                "field": "serviceType",
+                "operator": "equals",
+                "value": "Air Freight"
+              }
+            ],
+            "rate": 1850,
+            "unitPrice": 1850,
+            "amount": 1850
+          }
+        ],
+        "initialAdjustments": []
+      }
+    },
+    "quoteVersionHistory": {
+      "RATE-DEMO-001": [
+        {
+          "historyId": "RATE-DEMO-001-V3",
+          "version": 3,
+          "event": "Edited",
+          "role": "Pricing Manager",
+          "changedAt": "2026-09-11T10:00:00+08:00",
+          "summary": "Updated the quotation for the representative FTL multi-stop shipment."
+        },
+        {
+          "historyId": "RATE-DEMO-001-V2",
+          "version": 2,
+          "event": "Edited",
+          "role": "Pricing Manager",
+          "changedAt": "2026-09-07T16:30:00+08:00",
+          "summary": "Updated weight tiers and detention pricing."
+        },
+        {
+          "historyId": "RATE-DEMO-001-V1",
+          "version": 1,
+          "event": "Created",
+          "role": "Sales Operations",
+          "changedAt": "2025-11-15T10:00:00-08:00",
+          "summary": "Created the quote plan for the 2026 contract period."
+        }
+      ],
+      "RATE-DEMO-002": [
+        {
+          "historyId": "RATE-DEMO-002-V2",
+          "version": 2,
+          "event": "Edited",
+          "role": "Pricing Manager",
+          "changedAt": "2026-09-06T11:20:00+08:00",
+          "summary": "Updated residential and appointment charges."
+        },
+        {
+          "historyId": "RATE-DEMO-002-V1",
+          "version": 1,
+          "event": "Created",
+          "role": "Sales Operations",
+          "changedAt": "2025-12-02T14:30:00-08:00",
+          "summary": "Created the project quote plan."
+        }
+      ],
+      "RATE-DEMO-003": [
+        {
+          "historyId": "RATE-DEMO-003-V2",
+          "version": 2,
+          "event": "Edited",
+          "role": "Pricing Manager",
+          "changedAt": "2026-09-06T09:45:00+08:00",
+          "summary": "Added high-value handling requirements."
+        },
+        {
+          "historyId": "RATE-DEMO-003-V1",
+          "version": 1,
+          "event": "Created",
+          "role": "Sales Operations",
+          "changedAt": "2026-09-01T09:15:00-07:00",
+          "summary": "Created the draft FTL quote plan."
+        }
+      ],
+      "RATE-DEMO-004": [
+        {
+          "historyId": "RATE-DEMO-004-V3",
+          "version": 3,
+          "event": "Edited",
+          "role": "Pricing Manager",
+          "changedAt": "2026-09-05T17:10:00+08:00",
+          "summary": "Updated refrigerated service and detention pricing."
+        },
+        {
+          "historyId": "RATE-DEMO-004-V2",
+          "version": 2,
+          "event": "Edited",
+          "role": "Account Manager",
+          "changedAt": "2026-08-15T13:40:00-07:00",
+          "summary": "Expanded the eligible pallet range."
+        },
+        {
+          "historyId": "RATE-DEMO-004-V1",
+          "version": 1,
+          "event": "Created",
+          "role": "Sales Operations",
+          "changedAt": "2026-06-12T11:20:00-07:00",
+          "summary": "Created the cold-chain quote plan."
+        }
+      ],
+      "RATE-DEMO-005": [
+        {
+          "historyId": "RATE-DEMO-005-V2",
+          "version": 2,
+          "event": "Edited",
+          "role": "Pricing Manager",
+          "changedAt": "2026-09-04T09:20:00+08:00",
+          "summary": "Updated the 40HC ocean freight and fuel surcharge."
+        },
+        {
+          "historyId": "RATE-DEMO-005-V1",
+          "version": 1,
+          "event": "Created",
+          "role": "Sales Operations",
+          "changedAt": "2025-12-18T09:30:00-08:00",
+          "summary": "Created the 2026 transpacific FCL customer quote."
+        }
+      ],
+      "RATE-DEMO-006": [
+        {
+          "historyId": "RATE-DEMO-006-V1",
+          "version": 1,
+          "event": "Created",
+          "role": "Sales Operations",
+          "changedAt": "2026-01-08T11:00:00+08:00",
+          "summary": "Created the 2026 Asia to US West Coast air freight customer quote."
+        }
+      ]
+    },
+    "interactiveQuotationVariants": [
+      {
+        "quoteId": "RATE-DEMO-099",
+        "customer": "Demo Foods West LLC",
+        "name": "Cold Chain West Alternate 2026",
+        "version": 1,
+        "status": "accepted",
+        "currency": "USD",
+        "transportMode": "TRUCKING",
+        "serviceScope": "LTL · Refrigerated",
+        "createdAt": "2026-08-18T10:00:00-07:00",
+        "effectiveFrom": "2026-07-01",
+        "effectiveTo": "2026-12-31",
+        "shipmentIds": [],
+        "rateMatrix": [
+          {
+            "name": "Base LTL freight",
+            "rateCategory": "base",
+            "lane": "Central CA → Nevada",
+            "equipmentType": "Reefer (R)",
+            "tier": "0–4 pallets",
+            "basis": "Per shipment",
+            "conditions": [
+              {
+                "field": "palletCount",
+                "operator": "between",
+                "min": 0,
+                "max": 4
+              }
+            ],
+            "rate": 760
+          },
+          {
+            "name": "Base LTL freight",
+            "rateCategory": "base",
+            "lane": "Central CA → Nevada",
+            "equipmentType": "Reefer (R)",
+            "tier": "5–10 pallets",
+            "basis": "Per shipment",
+            "conditions": [
+              {
+                "field": "palletCount",
+                "operator": "between",
+                "min": 5,
+                "max": 10
+              }
+            ],
+            "rate": 920
+          }
+        ],
+        "surchargeRules": [
+          {
+            "code": "COLD_CHAIN",
+            "name": "Refrigerated service",
+            "rateCategory": "additional",
+            "equipmentType": "Reefer (R)",
+            "trigger": "Per shipment",
+            "conditions": [
+              {
+                "field": "temperatureControlled",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 125,
+            "unit": "flat"
+          },
+          {
+            "code": "APPOINTMENT",
+            "name": "Delivery appointment",
+            "rateCategory": "additional",
+            "equipmentType": null,
+            "trigger": "Per appointment",
+            "conditions": [
+              {
+                "field": "appointmentRequired",
+                "operator": "equals",
+                "value": true
+              }
+            ],
+            "rate": 85,
+            "unit": "flat"
+          }
+        ],
+        "lastUpdated": "2026-09-08T14:20:00-07:00"
       }
     ]
   },

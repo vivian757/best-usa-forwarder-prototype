@@ -144,5 +144,5 @@ export function FeedbackSnackbar({ feedback, onClose }) {
 
 export { ManagementDataGrid, RowActionButton, RowActionMenu } from "./DataGridPatterns";
 export { AppliedFilterBar, BulkActionBar, DeleteConfirmDialog, ImportButton, MetricCard, MetricCard as MetricFilterCard, SearchSheet, TableToolbar } from "./ListPagePatterns";
-export { AutocompleteInput, FieldLabel, RadioInput, SelectInput, TextInput, TimeRangeInput } from "./FormControls";
+export { AutocompleteInput, EnglishDateInput, EnglishDateTimeInput, FieldLabel, RadioInput, SelectInput, TextInput, TimeRangeInput } from "./FormControls";
 export { AppShell, SIDEBAR_COLLAPSED_WIDTH, SIDEBAR_WIDTH } from "./AppShell";

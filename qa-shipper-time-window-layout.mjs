@@ -14,16 +14,17 @@ try {
   await page.getByText("TRK-DEMO-001", { exact: true }).first().click();
 
   const shipperSection = page.locator("#field-section-shipper");
-  const contact = shipperSection.locator(".field-control").filter({ has: page.getByText("Contact", { exact: true }) });
-  const timeWindow = shipperSection.locator(".field-control").filter({ has: page.getByText("Time Window", { exact: true }) });
-  const [contactBox, timeWindowBox] = await Promise.all([contact.boundingBox(), timeWindow.boundingBox()]);
+  const contactName = shipperSection.locator(".field-control").filter({ has: page.getByText("Contact name", { exact: true }) });
+  const contactPhone = shipperSection.locator(".field-control").filter({ has: page.getByText("Contact phone", { exact: true }) });
+  const timeWindow = shipperSection.locator(".field-control").filter({ has: page.getByText("Time window", { exact: true }) });
+  const [contactNameBox, contactPhoneBox, timeWindowBox] = await Promise.all([contactName.boundingBox(), contactPhone.boundingBox(), timeWindow.boundingBox()]);
 
-  assert.ok(contactBox && timeWindowBox, "Shipper contact and time window are visible");
-  assert.ok(Math.abs(contactBox.y - timeWindowBox.y) < 4, "Time Window is aligned beside Contact");
-  assert.ok(timeWindowBox.x > contactBox.x, "Time Window occupies the right column");
-  assert.ok(Math.abs(contactBox.width - timeWindowBox.width) < 4, "Both fields use equal column widths");
+  assert.ok(contactNameBox && contactPhoneBox && timeWindowBox, "Structured contact and time window fields are visible");
+  assert.ok(Math.abs(contactNameBox.y - contactPhoneBox.y) < 4, "Contact name and phone are aligned as a pair");
+  assert.ok(contactPhoneBox.x > contactNameBox.x, "Contact phone occupies the right column");
+  assert.ok(timeWindowBox.y > contactNameBox.y, "Time window follows the structured contact fields");
 
-  console.log("Shipper Time Window layout QA passed.");
+  console.log("Shipper contact and Time Window layout QA passed.");
 } finally {
   await browser.close();
 }

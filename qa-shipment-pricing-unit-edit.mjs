@@ -20,13 +20,13 @@ try {
 
   const pricingTable = page.getByRole("table", { name: "customer fee breakdown" });
   const headers = await pricingTable.getByRole("columnheader").allTextContents();
-  assert.deepEqual(headers, ["Fee item", "Pricing details", "Unit", "Unit price"]);
+  assert.deepEqual(headers, ["Fee item", "Details", "Rule Type", "Unit", "Unit price"]);
   assert.equal(headers.includes("Amount"), false, "Shipment pricing does not expose an Amount column");
   assert.equal((await pricingTable.locator(".fee-line-unit").first().innerText()).trim(), "Truck", "Pricing units use sentence case");
-  assert.equal(await pricingTable.locator(".fee-line-row small").count(), 1, "Distinct customer pricing details remain visible");
+  assert.equal(await pricingTable.locator(".fee-line-row small").count(), 2, "Customer pricing conditions remain visible");
 
   const vendorLedger = page.locator(".billing-ledger-block").filter({ has: page.getByRole("heading", { name: "Vendor Cost", exact: true }) });
-  assert.equal(await vendorLedger.locator(".fee-line-row small").count(), 0, "Duplicate vendor pricing details are suppressed");
+  assert.equal(await vendorLedger.locator(".fee-line-row small").count(), 2, "Vendor pricing conditions remain visible without repeating the Unit");
 
   await page.getByRole("button", { name: "Edit", exact: true }).click();
   const customerUnitPrice = page.getByLabel("Customer Charge Base FTL freight unit price", { exact: true });

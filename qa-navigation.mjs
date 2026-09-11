@@ -48,7 +48,7 @@ try {
   await page.locator(".MuiDataGrid-row").first().waitFor();
   assert.ok(await page.locator(".MuiDataGrid-row").count() > 0, "Trucking shows current synthetic records");
   assert.equal(await page.getByRole("columnheader", { name: "Mode" }).count(), 1);
-  assert.equal(await page.getByRole("columnheader", { name: "Service Type" }).count(), 1);
+  assert.equal(await page.getByRole("columnheader", { name: "Load Type" }).count(), 1);
   await page.screenshot({ path: `${outputDir}/desktop-trucking-navigation.png`, fullPage: false });
 
   await page.locator(".MuiDataGrid-row").first().click();
